@@ -28,6 +28,7 @@ func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) er
 	var (
 		logger  = log.WithCtx(ctx)
 		sslMode = "disable"
+		newDB   *bun.DB
 	)
 
 	if wg != nil {
@@ -51,7 +52,7 @@ func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) er
 		sqlDB.SetMaxIdleConns(c.MaxCons)
 		sqlDB.SetMaxOpenConns(c.MaxCons)
 
-		db = bun.NewDB(sqlDB, mysqldialect.New())
+		newDB = bun.NewDB(sqlDB, mysqldialect.New())
 	case constant.DBPostgres:
 		cfg, err := pgxpool.ParseConfig(fmt.Sprintf("%s://%s:%s@%s/%s?sslmode=%s", c.Type, c.Username, c.Password, addr, c.Database, sslMode))
 		if err != nil {
@@ -74,21 +75,25 @@ func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) er
 			cfg.ConnConfig.TLSConfig.RootCAs.AppendCertsFromPEM([]byte(c.TLS.RootCAPEM))
 		}
 		sqlDB := stdlib.OpenDBFromPool(pool)
-		db = bun.NewDB(sqlDB, pgdialect.New(), bun.WithDiscardUnknownColumns())
+		newDB = bun.NewDB(sqlDB, pgdialect.New(), bun.WithDiscardUnknownColumns())
 	default:
 		return errors.New("database type not supported")
 	}
 
-	if err := db.DB.Ping(); err != nil {
+	if err := newDB.DB.Ping(); err != nil {
 		db = nil
 		return err
 	}
 
 	logger.Info(fmt.Sprintf("⚡️[%s]: connected to %s", c.Type, addr))
 
-	db.AddQueryHook(
+	newDB.AddQueryHook(
 		bundebug.NewQueryHook(bundebug.WithVerbose(true)),
 	)
+
+	// reassign when done setting
+	// for high availability
+	db = newDB
 
 	// open telemetry tracing
 	//db.AddQueryHook(bunotel.NewQueryHook(bunotel.WithDBName(c.Database)))
