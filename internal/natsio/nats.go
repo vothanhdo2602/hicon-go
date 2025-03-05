@@ -2,11 +2,13 @@ package natsio
 
 import (
 	"context"
+	"fmt"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/vothanhdo2602/hicon/external/util/log"
-	"github.com/vothanhdo2602/hicon/external/util/natstil"
+	"github.com/vothanhdo2602/hicon/internal/natsio/handler"
 	"sync"
+	"time"
 )
 
 var (
@@ -35,6 +37,16 @@ func Init(ctx context.Context, wg *sync.WaitGroup) (err error) {
 		return
 	}
 
+	err = RegisterReqrep(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
+	nats.MaxPingsOutstanding(100000)
+
+	logger.Info(fmt.Sprintf("⚡️[natsio]: connected to %s", nats.DefaultURL))
+
 	return
 }
 
@@ -46,25 +58,25 @@ func GetJs() jetstream.JetStream {
 	return js
 }
 
-func Subscribe(ctx context.Context) (err error) {
-	if err = ReqrepQueueSubscribe(ctx, updateConfigSubject, UpdateConfig); err != nil {
-		return
-	}
-	if err = ReqrepQueueSubscribe(ctx, updateConfigSubject, UpdateConfig); err != nil {
+func RegisterReqrep(ctx context.Context) (err error) {
+	if err = ReqrepQueueSubscribe(ctx, GetUpdateConfigSubject(), handler.UpdateConfig); err != nil {
 		return
 	}
 
+	if err = ReqrepQueueSubscribe(ctx, GetFindByPrimaryKeysSubject(), handler.FindByPrimaryKeys); err != nil {
+		return
+	}
 	return
 }
 
-func ReqrepQueueSubscribe(ctx context.Context, channel string, cb func(msg *nats.Msg)) error {
+func ReqrepQueueSubscribe(ctx context.Context, subject string, cb func(msg *nats.Msg)) error {
 	var (
 		logger = log.WithCtx(ctx)
-		sub    = natstil.GenerateReqrepSubject(channel)
-		queue  = natstil.GenerateQueueNameFromSubject(sub)
+		queue  = GenerateQueueNameFromSubject(subject)
 	)
 
-	if _, err := nc.QueueSubscribe(sub, queue, cb); err != nil {
+	_, err := nc.QueueSubscribe(subject, queue, cb)
+	if err != nil {
 		logger.Error(err.Error())
 		return err
 	}
@@ -75,7 +87,7 @@ func ReqrepQueueSubscribe(ctx context.Context, channel string, cb func(msg *nats
 func JetstreamQueueSubscribe(ctx context.Context, stream, channel string) error {
 	var (
 		logger = log.WithCtx(ctx)
-		sub    = natstil.GenerateJetstreamSubject(stream, channel)
+		sub    = GenerateJetstreamSubject(stream, channel)
 	)
 
 	jsCfg := jetstream.StreamConfig{
@@ -88,4 +100,9 @@ func JetstreamQueueSubscribe(ctx context.Context, stream, channel string) error 
 	}
 
 	return nil
+}
+
+func GracefulStop(ctx context.Context) {
+	time.Sleep(20 * time.Second)
+	nc.Close()
 }

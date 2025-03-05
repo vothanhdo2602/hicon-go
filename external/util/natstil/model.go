@@ -1,8 +1,9 @@
 package natstil
 
-type IResponse[T any] struct {
+type BaseResponse[T any] struct {
 	Data    T
 	Status  int
 	Message string
+	Shared  bool
 	Success bool
 }

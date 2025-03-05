@@ -13,3 +13,45 @@ services:
       - "8222:8222"
     networks:
       - hicon
+
+  hicon-pg:
+    container_name: hicon-pg
+    image: bitnami/postgresql
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USERNAME=hicon
+      - POSTGRES_PASSWORD=hicon_private_pwd
+      - POSTGRES_DATABASE=hicon_database
+    networks:
+      - hicon
+
+  hicon-mysql:
+    container_name: hicon-mysql
+    image: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+      - /opt/docker/mysql:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=hicon_private_pwd
+      - MYSQL_DATABASE=hicon_database
+      - MYSQL_USER=hicon
+      - MYSQL_PASSWORD=hicon_private_pwd
+    networks:
+      - hicon
+
+  hicon-redis:
+    container_name: hicon-redis
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    restart: always
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_USERNAME=bohemian
+      - REDIS_PASSWORD=bmF0YW4=
+      - REDIS_DB=0
+    networks:
+      - hicon

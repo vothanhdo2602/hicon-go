@@ -17,7 +17,6 @@ import (
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/util/log"
-	"go.uber.org/zap"
 	"sync"
 )
 
@@ -25,7 +24,7 @@ var (
 	db *bun.DB
 )
 
-func Init(ctx context.Context, wg *sync.WaitGroup) error {
+func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) error {
 	var (
 		logger  = log.WithCtx(ctx)
 		sslMode = "disable"
@@ -35,7 +34,6 @@ func Init(ctx context.Context, wg *sync.WaitGroup) error {
 		defer wg.Done()
 	}
 
-	c := config.GetENV().DB.DBConfig
 	addr := fmt.Sprintf("%s:%v", c.Host, c.Port)
 
 	if c.TLS != nil {
@@ -46,17 +44,22 @@ func Init(ctx context.Context, wg *sync.WaitGroup) error {
 	case constant.DBMysql:
 		sqlDB, err := sql.Open(constant.DBMysql, fmt.Sprintf("%s:%s@tcp(%s)/%s", c.Username, c.Password, addr, c.Database))
 		if err != nil {
-			panic(err)
+			logger.Error(err.Error())
+			return err
 		}
+
+		sqlDB.SetMaxIdleConns(c.MaxCons)
+		sqlDB.SetMaxOpenConns(c.MaxCons)
 
 		db = bun.NewDB(sqlDB, mysqldialect.New())
 	case constant.DBPostgres:
-		cfg, err := pgxpool.ParseConfig(fmt.Sprintf("%s://%s:%d@%s/%s?sslmode=%s", constant.DBPostgres, c.Host, c.Port, addr, c.Database, sslMode))
+		cfg, err := pgxpool.ParseConfig(fmt.Sprintf("%s://%s:%s@%s/%s?sslmode=%s", c.Type, c.Username, c.Password, addr, c.Database, sslMode))
 		if err != nil {
 			logger.Error(err.Error())
 			return err
 		}
 		cfg.MinConns = int32(c.MaxCons)
+		cfg.MaxConns = int32(c.MaxCons)
 		cfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 
 		pool, err := pgxpool.NewWithConfig(ctx, cfg)
@@ -77,14 +80,14 @@ func Init(ctx context.Context, wg *sync.WaitGroup) error {
 	}
 
 	if err := db.DB.Ping(); err != nil {
-		logger.Error(err.Error(), zap.String("postgres", fmt.Sprintf("⚡️[postgres]: addr: %s", addr)))
+		db = nil
 		return err
 	}
 
-	logger.Info(fmt.Sprintf("⚡️[postgres]: connected to %s", addr))
+	logger.Info(fmt.Sprintf("⚡️[%s]: connected to %s", c.Type, addr))
 
 	db.AddQueryHook(
-		bundebug.NewQueryHook(bundebug.WithVerbose(c.Debug)),
+		bundebug.NewQueryHook(bundebug.WithVerbose(true)),
 	)
 
 	// open telemetry tracing

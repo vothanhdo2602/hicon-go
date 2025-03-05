@@ -2,7 +2,6 @@ package natstil
 
 import (
 	"context"
-	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/nats-io/nats.go"
 	"github.com/vothanhdo2602/hicon/external/constant"
@@ -10,24 +9,7 @@ import (
 	"github.com/vothanhdo2602/hicon/external/util/mongotil"
 	"go.uber.org/zap"
 	"net/http"
-	"strings"
 )
-
-const (
-	stream = "hicon"
-)
-
-func GenerateReqrepSubject(channel string) string {
-	return fmt.Sprintf("%s.reqrep.%s", stream, channel)
-}
-
-func GenerateJetstreamSubject(channel, action string) string {
-	return fmt.Sprintf("%s.jetstream.%s.%s", stream, channel, action)
-}
-
-func GenerateQueueNameFromSubject(subject string) string {
-	return strings.ReplaceAll(subject, ".", "_")
-}
 
 func GetContext(msg *nats.Msg) context.Context {
 	var (
@@ -51,11 +33,21 @@ func Response(ctx context.Context, msg *nats.Msg) {
 	}
 }
 
-func R400(msg string) []byte {
-	r := &IResponse[any]{
-		Message: msg,
+func R200(data interface{}) []byte {
+	r := &BaseResponse[any]{
+		Data:    data,
 		Status:  http.StatusOK,
 		Success: true,
+	}
+	respBytes, _ := json.Marshal(r)
+	return respBytes
+}
+
+func R400(msg string) []byte {
+	r := &BaseResponse[any]{
+		Message: msg,
+		Status:  http.StatusBadRequest,
+		Success: false,
 	}
 	respBytes, _ := json.Marshal(r)
 	return respBytes

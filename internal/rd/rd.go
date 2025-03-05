@@ -44,7 +44,7 @@ func Init(ctx context.Context, wg *sync.WaitGroup) {
 	logger.Info(fmt.Sprintf("⚡️[redis]: connected to %s", addr))
 }
 
-func HSet[T entity.BaseInterface[T]](ctx context.Context, database, table string, m T) {
+func HSet[T entity.BaseEntity[T]](ctx context.Context, database, table string, m T) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()
@@ -59,7 +59,7 @@ func HSet[T entity.BaseInterface[T]](ctx context.Context, database, table string
 	}
 }
 
-func HMSet[T entity.BaseInterface[T]](ctx context.Context, database, table string, data []T) {
+func HMSet[T entity.BaseEntity[T]](ctx context.Context, database, table string, data []T) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()
@@ -80,7 +80,7 @@ func HMSet[T entity.BaseInterface[T]](ctx context.Context, database, table strin
 	}
 }
 
-func HGet[T entity.BaseInterface[T]](ctx context.Context, database, table string, field string) *T {
+func HGet[T entity.BaseEntity[T]](ctx context.Context, database, table string, field string) *T {
 	var (
 		logger = log.WithCtx(ctx)
 		output = commontil.InitStructFromGeneric[T]()
@@ -98,7 +98,7 @@ func HGet[T entity.BaseInterface[T]](ctx context.Context, database, table string
 	return &output
 }
 
-func HMGet[T entity.BaseInterface[T]](ctx context.Context, database, table string, fields []string) []T {
+func HMGet[T entity.BaseEntity[T]](ctx context.Context, database, table string, fields []string) []T {
 	var (
 		logger = log.WithCtx(ctx)
 		key    = entity.GetEntityBucketKey(database, table)
@@ -119,7 +119,7 @@ func HMGet[T entity.BaseInterface[T]](ctx context.Context, database, table strin
 	return models
 }
 
-func hGetAllWithSQL[T entity.BaseInterface[T]](ctx context.Context, database, table, sql string) (models []T, err error) {
+func hGetAllWithSQL[T entity.BaseEntity[T]](ctx context.Context, database, table, sql string) (models []T, err error) {
 	var (
 		logger = log.WithCtx(ctx)
 		key    = entity.GetSQLBucketKey(database)
@@ -137,7 +137,7 @@ func hGetAllWithSQL[T entity.BaseInterface[T]](ctx context.Context, database, ta
 	return models, nil
 }
 
-func HSetAllWithSQL[T entity.BaseInterface[T]](ctx context.Context, database, table, sql string, data []T) {
+func HSetAllWithSQL[T entity.BaseEntity[T]](ctx context.Context, database, table, sql string, data []T) {
 	var (
 		logger             = log.WithCtx(ctx)
 		pipe               = client.Pipeline()
@@ -173,7 +173,7 @@ func HSetAllWithSQL[T entity.BaseInterface[T]](ctx context.Context, database, ta
 	}
 }
 
-// func HGetAllWithSQL[T entity.BaseInterface[T]](ctx context.Context, sql string) (models []T, err error) {
+// func HGetAllWithSQL[T entity.BaseEntity[T]](ctx context.Context, sql string) (models []T, err error) {
 // 	var (
 // 		pipe = client.Pipeline()
 // 	)

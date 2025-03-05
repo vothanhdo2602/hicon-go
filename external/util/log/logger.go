@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	loggerKey = "zap-logger-ctx"
+	loggerKey = "zap-ctx-logger"
 )
 
 var (
@@ -14,7 +14,7 @@ var (
 )
 
 func Init() {
-	logger, _ = zap.NewProduction()
+	logger, _ = zap.NewDevelopment()
 }
 
 func NewCtx(ctx context.Context, fields ...zap.Field) context.Context {

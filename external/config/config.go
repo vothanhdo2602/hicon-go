@@ -1,13 +1,15 @@
 package config
 
 import (
+	"errors"
+	"reflect"
 	"time"
 )
 
 type ENV struct {
 	DB struct {
-		DBConfig *DBConfig
-		Redis    struct {
+		DBConfiguration *DBConfiguration
+		Redis           struct {
 			Host     string
 			Port     int
 			Username string
@@ -42,29 +44,38 @@ type TLS struct {
 	RootCAPEM     string
 }
 
-type DBConfig struct {
-	Type         string
-	Host         string
-	Port         int
-	Username     string
-	Password     string
-	Database     string
-	MaxCons      int
-	TLS          *TLS
-	Debug        bool
-	DisableCache bool
-	TableConfigs []*TableConfig
-	TableStructs map[string]interface{}
+type DBConfiguration struct {
+	Type          string
+	Host          string
+	Port          int
+	Username      string
+	Password      string
+	Database      string
+	MaxCons       int
+	TLS           *TLS
+	Debug         bool
+	DisableCache  bool
+	ModelRegistry *ModelRegistry
 }
 
-type TableConfig struct {
+type ModelRegistry struct {
+	TableConfigurations map[string]*TableConfiguration
+	Models              map[string][]reflect.StructField
+}
+
+func (s *ModelRegistry) GetModelBuilder(tbl string) []reflect.StructField {
+	return s.Models[tbl]
+}
+
+type TableConfiguration struct {
 	Name                  string
-	PrimaryColumns        []string
+	PrimaryColumns        map[string]interface{}
 	ColumnConfigs         map[string]*ColumnConfig
-	RelationColumnConfigs map[string]*RelationColumnConfigs
+	RelationColumnConfigs map[string]*RelationColumnConfig
 }
 
-type RelationColumnConfigs struct {
+type RelationColumnConfig struct {
+	Name     string
 	RefTable string
 	Type     string
 }
@@ -75,12 +86,27 @@ type ColumnConfig struct {
 	IsPrimaryKey bool
 }
 
-var env *ENV
+var env ENV
 
-func GetENV() *ENV {
+func GetENV() ENV {
 	return env
 }
 
-func SetDBConfig(cfg *DBConfig) {
-	env.DB.DBConfig = cfg
+func SetDBConfiguration(cfg *DBConfiguration) {
+	env.DB.DBConfiguration = cfg
+}
+
+func ConfigurationUpdated() error {
+	if env.DB.DBConfiguration != nil {
+		return nil
+	}
+	return errors.New("no configuration")
+}
+
+func GetModelRegistry() *ModelRegistry {
+	return env.DB.DBConfiguration.ModelRegistry
+}
+
+func (s *ModelRegistry) GetNewModel(name string) interface{} {
+	return reflect.New(reflect.StructOf(s.Models[name])).Interface()
 }

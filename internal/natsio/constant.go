@@ -1,5 +1,10 @@
 package natsio
 
 const (
-	updateConfigSubject = "update_config_subject"
+	UpdateConfigChannel      = "update_config"
+	FindByPrimaryKeysChannel = "find_by_id"
+)
+
+const (
+	stream = "hicon"
 )

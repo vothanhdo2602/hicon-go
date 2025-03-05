@@ -8,7 +8,7 @@ const (
 	SQLBucketKey = "sql_bucket"
 )
 
-type BaseInterface[T any] interface {
+type BaseEntity[T any] interface {
 	GetTableName() string
 	GetID() string
 	MarshalBinary() ([]byte, error) // for redis

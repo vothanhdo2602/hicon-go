@@ -1,8 +1,6 @@
-export REDIS_HOST=13.212.22.236
-export REDIS_PORT=6379
-export REDIS_USERNAME=bohemian
-export REDIS_PASSWORD=bmF0YW4=
-export REDIS_DB=0
+export ENV=development
 
 server:
 	go run cmd/main.go
+run-services:
+	docker compose -f deployment/docker/docker-compose.yaml up -d

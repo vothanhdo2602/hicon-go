@@ -3,10 +3,11 @@ package orm
 import (
 	"errors"
 	"fmt"
-	dynamicstruct "github.com/ompluscator/dynamic-struct"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/ptr"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"reflect"
 	"strings"
 )
@@ -19,16 +20,32 @@ const (
 	HasManyToMany = "has-many-to-many"
 )
 
-func BuildEntity(tableConfig *config.TableConfig) (dynamicstruct.Builder, error) {
-	// Add bun.BaseModel as embedded field
-	def := dynamicstruct.NewStruct().AddField("BaseModel", bun.BaseModel{}, fmt.Sprintf(`bun:"table:"%s"`, tableConfig.Name))
+type CustomBaseModel struct {
+	bun.BaseModel
+	tableName string
+}
+
+// TableName implements bun.TableNamer interface
+func (m *CustomBaseModel) TableName() string {
+	return m.tableName
+}
+
+func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField, error) {
+	var (
+		fields = []reflect.StructField{
+			// Embedded BaseModel with table name tag
+			{
+				Name:      "BaseModel",
+				Type:      reflect.TypeOf(bun.BaseModel{}),
+				Tag:       reflect.StructTag(fmt.Sprintf(`bun:"table:%s"`, tableConfig.Name)),
+				Anonymous: true,
+			},
+		}
+	)
 
 	// Add fields based on column configurations
 	for colName, col := range tableConfig.ColumnConfigs {
 		fieldType := getGoType(col.Type, col.Nullable)
-		if fieldType == nil {
-			return nil, fmt.Errorf("unsupported field type: %s", col.Type)
-		}
 
 		// Build bun tag
 		tags := []string{fmt.Sprintf("column:%s", colName)}
@@ -40,19 +57,19 @@ func BuildEntity(tableConfig *config.TableConfig) (dynamicstruct.Builder, error)
 		}
 
 		// Add field with both json and bun tags
-		def.AddField(
-			strings.Title(colName), // Convert to exported field name
-			fieldType,
-			fmt.Sprintf(`json:"%s,omitempty" redis:"%s,omitempty" bun:"%s"`, colName, colName, strings.Join(tags, ",")),
-		)
+		field := reflect.StructField{
+			Name: cases.Title(language.English).String(colName),
+			Type: reflect.TypeOf(fieldType),
+			Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s,omitempty" redis:"%s,omitempty" bun:"%s"`, colName, colName, strings.Join(tags, ","))),
+		}
+		fields = append(fields, field)
 	}
 
 	// Create instance
-	instance := def
-	return instance, nil
+	return fields, nil
 }
 
-func MapRelationToEntity(tableConfig *config.TableConfig, entities map[string]dynamicstruct.Builder) error {
+func MapRelationToEntity(tableConfig *config.TableConfiguration, entities map[string][]reflect.StructField) error {
 	for colName, col := range tableConfig.RelationColumnConfigs {
 		if _, ok := entities[col.RefTable]; !ok {
 			return errors.New(fmt.Sprintf("Table %s not found", col.RefTable))
@@ -60,7 +77,7 @@ func MapRelationToEntity(tableConfig *config.TableConfig, entities map[string]dy
 
 		var (
 			fieldType interface{}
-			modelType = reflect.TypeOf(entities[col.RefTable].Build())
+			modelType = reflect.TypeOf(entities[col.RefTable])
 		)
 		switch col.Type {
 		case HasOne, BelongTo:
@@ -72,47 +89,48 @@ func MapRelationToEntity(tableConfig *config.TableConfig, entities map[string]dy
 		}
 
 		// Add field with both json and bun tags
-		title := strings.Title(colName)
-		entities[colName].AddField(
-			title, // Convert to exported field name
-			fieldType,
-			fmt.Sprintf(`json:"%s" bun:"%s"`, strings.ToLower(title), col.Type),
-		)
+		field := reflect.StructField{
+			Name: cases.Title(language.English).String(colName),
+			Type: reflect.TypeOf(fieldType),
+			Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s" bun:"-"`, colName)),
+		}
+		entities[tableConfig.Name] = append(entities[tableConfig.Name], field)
 	}
 
 	return nil
 }
 
 func getGoType(dbType string, nullable bool) interface{} {
-	var fieldType interface{}
+	var (
+		fieldType interface{}
+	)
 
 	switch strings.ToLower(dbType) {
 	case "string", "text", "varchar", "char":
+		fieldType = ""
 		if nullable {
 			fieldType = (*string)(nil)
-		} else {
-			fieldType = ""
 		}
 	case "int", "integer", "bigint":
+		fieldType = 0
 		if nullable {
-			fieldType = (*int64)(nil)
-		} else {
-			fieldType = int64(0)
+			fieldType = (*int)(nil)
 		}
 	case "float", "double", "decimal":
+		fieldType = float64(0)
 		if nullable {
 			fieldType = (*float64)(nil)
-		} else {
-			fieldType = float64(0)
 		}
 	case "bool", "boolean":
+		fieldType = false
 		if nullable {
 			fieldType = (*bool)(nil)
-		} else {
-			fieldType = false
 		}
 	case "time", "timestamp":
-		fieldType = (*string)(nil) // Using string for time fields for simplicity
+		fieldType = ""
+		if nullable {
+			fieldType = (*string)(nil)
+		}
 	default:
 		fieldType = interface{}(nil)
 	}

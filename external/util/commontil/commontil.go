@@ -35,7 +35,7 @@ func GetCurrentPublicIP(ctx context.Context) string {
 	}
 
 	defer func() {
-		err := req.Body.Close()
+		err = req.Body.Close()
 		if err != nil {
 			logger.Error(err.Error())
 		}

@@ -41,7 +41,7 @@ func NewWorkerPool() *WorkerPool {
 	return wp
 }
 
-func (wp *WorkerPool) Start() {
+func (s *WorkerPool) Start() {
 	defer func() {
 		if r := recover(); r != nil {
 			log.WithCtx(context.Background()).Error("Recover from panic", zap.Any("error", r))
@@ -49,11 +49,11 @@ func (wp *WorkerPool) Start() {
 		}
 	}()
 
-	for i := 0; i < wp.numWorkers; i++ {
+	for i := 0; i < s.numWorkers; i++ {
 		go func() {
 			for {
 				select {
-				case job := <-wp.jobs:
+				case job := <-s.jobs:
 					job.Handler(job)
 				}
 			}
@@ -61,20 +61,24 @@ func (wp *WorkerPool) Start() {
 	}
 }
 
-func (wp *WorkerPool) Submit(job *Job) {
-	wp.jobs <- job
+func (s *WorkerPool) Submit(job *Job) {
+	s.jobs <- job
 }
 
-func (wp *WorkerPool) Stop() {
-	close(wp.jobs)
+func (s *WorkerPool) Stop() {
+	close(s.jobs)
 }
 
-func SendJob(fn func(*Job), cb func(r chan *Result)) {
+func GetWorkerPool() *WorkerPool {
+	return wp
+}
+
+func (s *WorkerPool) SendJob(fn func(*Job), cb func(r chan *Result)) {
 	if fn == nil {
 		return
 	}
 	j := &Job{Handler: fn, ChResult: make(chan *Result, 1)}
-	wp.Submit(j)
+	s.Submit(j)
 	if cb != nil {
 		cb(j.ChResult)
 		close(j.ChResult)

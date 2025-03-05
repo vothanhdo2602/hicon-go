@@ -5,40 +5,25 @@ import (
 	dbsql "database/sql"
 	"errors"
 	"fmt"
+	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
-	"strings"
 	"sync"
 
 	"github.com/uptrace/bun"
-	"github.com/vothanhdo2602/hicon/external/model/entity"
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/internal/orm"
-	"github.com/vothanhdo2602/hicon/internal/rd"
 	"go.uber.org/zap"
 )
 
 const (
-	findByIDAction  = "find-by-id-action"
-	findByIDsAction = "find_by_ids_action"
-	findAllAction   = "find_all_action"
+	FindByPrimaryKeysAction = "find_by_primary_keys_action"
+	FindAllAction           = "find_all_action"
 )
 
 const (
 	whereIDTmpl = "id = ?"
 )
-
-func FindByIDPrefixKey(dbName string) string {
-	return fmt.Sprintf("%s:%s", dbName, findByIDAction)
-}
-
-func FindByIDsPrefixKey(dbName string) string {
-	return fmt.Sprintf("%s:%s", dbName, findByIDsAction)
-}
-
-func FindAllPrefixKey(dbName string) string {
-	return fmt.Sprintf("%s:%s", dbName, findAllAction)
-}
 
 type dbInterface interface {
 	String() string
@@ -47,146 +32,92 @@ type dbInterface interface {
 }
 
 type BaseInterface[T any] interface {
-	FindByID(ctx context.Context, id string) *T
-	FindByIDs(ctx context.Context, ids []string) []T
-	FindAllByIDs(ctx context.Context, ids []string) []T
-	InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
-	UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
+	FindByPrimaryKeys(ctx context.Context, id string, md *ModelParams) (m *T, err error, shared bool)
+	//InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
+	//UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
 }
 
-type baseImpl[T entity.BaseInterface[T]] struct {
+type baseImpl[T any] struct {
 	g  sftil.Group
 	mu sync.Mutex
 }
 
-type baseCacheOpts struct {
+type CacheOpts struct {
 	SetCache bool
 	GetCache bool
 }
 
-func (s *baseImpl[T]) FindByID(ctx context.Context, id string) *T {
-	var (
-		key = fmt.Sprintf("%s:%s", findByIDPrefixKey, id)
-	)
-
-	if id == "" {
-		return nil
-	}
-
-	v, err, _ := s.g.Do(key, func() (interface{}, error) {
-		return s.FindByIDWithCacheOpts(ctx, id, baseCacheOpts{SetCache: true, GetCache: true})
-	})
-
-	if err != nil {
-		return nil
-	}
-
-	return v.(*T)
+type ModelParams struct {
+	Database     string
+	Table        string
+	DisableCache bool
+	LockKey      string
 }
 
-func (s *baseImpl[T]) FindByIDWithCacheOpts(ctx context.Context, id string, opts baseCacheOpts) (*T, error) {
+func (s *baseImpl[T]) FindByPrimaryKeys(ctx context.Context, id string, md *ModelParams) (m *T, err error, shared bool) {
 	var (
-		logger = log.WithCtx(ctx)
-		m      = commontil.InitStructFromGeneric[T]()
-		bgCtx  = commontil.CopyContext(ctx)
-		db     = orm.GetDB()
+		key = fmt.Sprintf("%s:%s", FindByPrimaryKeysAction, id)
 	)
 
-	if opts.GetCache {
-		cacheModel := rd.HGet[T](ctx, id)
-		if cacheModel != nil {
-			if opts.SetCache {
-				//go rd.HSet(bgCtx, *cacheModel)
-			}
+	chResult := s.g.DoChan(key, func() (interface{}, error) {
+		return s.FindByPrimaryKeysWithCacheOpts(ctx, id, md)
+	})
 
-			return cacheModel, nil
-		}
+	result := <-chResult
+
+	if result.Err != nil {
+		return nil, result.Err, shared
+	}
+	if result.Val == nil {
+		return
 	}
 
-	sql := db.NewSelect().Model(&m).Where(whereIDTmpl, id)
+	return result.Val.(*T), err, result.Shared
+}
+
+func (s *baseImpl[T]) FindByPrimaryKeysWithCacheOpts(ctx context.Context, id string, md *ModelParams) (interface{}, error) {
+	var (
+		logger = log.WithCtx(ctx)
+		db     = orm.GetDB()
+		m      = config.GetModelRegistry().GetNewModel(md.Table)
+	)
+
+	if !md.DisableCache {
+		//cacheModel := rd.HGet[T](ctx, id)
+		//if cacheModel != nil {
+		//	if opts.SetCache {
+		//		go rd.HSet(bgCtx, *cacheModel)
+		//	}
+		//
+		//	return cacheModel, nil
+		//}
+	}
+
+	sql := db.NewSelect().Model(m).Where(whereIDTmpl, id)
 	err := sql.Scan(ctx)
 	if err != nil {
 		if errors.Is(err, dbsql.ErrNoRows) {
-			// logical error, for production tracking
-			logger.Warn(err.Error(), zap.String("sql", sql.String()))
-		} else {
-			logger.Error(err.Error())
+			return nil, nil
 		}
+
+		logger.Error(err.Error())
 		return nil, err
 	}
 
-	if opts.SetCache {
+	if !md.DisableCache {
 		//go rd.HSet(bgCtx, m)
 	}
 	return &m, nil
 }
 
-func (s *baseImpl[T]) FindByIDs(ctx context.Context, ids []string) []T {
+func (s *baseImpl[T]) scan(ctx context.Context, sql dbInterface, values ...any) []interface{} {
 	var (
-		key = fmt.Sprintf("%s:%s", findByIDsPrefixKey, strings.Join(ids, ","))
-	)
-	v, _, _ := s.g.Do(key, func() (interface{}, error) {
-		var (
-			models []T
-			wg     sync.WaitGroup
-		)
-
-		for i := range ids {
-			wg.Add(1)
-			go func(i int) {
-				defer wg.Done()
-				m := s.FindByID(ctx, ids[i])
-				if m != nil {
-					s.mu.Lock()
-					models = append(models, *m)
-					s.mu.Unlock()
-				}
-			}(i)
-		}
-		wg.Wait()
-
-		return models, nil
-	})
-
-	return v.([]T)
-}
-
-func (s *baseImpl[T]) FindAllByIDs(ctx context.Context, ids []string) []T {
-	var (
-		key = fmt.Sprintf("%s:%s", findByIDsPrefixKey, strings.Join(ids, ","))
-	)
-	v, _, _ := s.g.Do(key, func() (interface{}, error) {
-		var (
-			models = make([]T, len(ids))
-			wg     sync.WaitGroup
-		)
-
-		for i := range ids {
-			wg.Add(1)
-			go func(i int) {
-				defer wg.Done()
-				m := s.FindByID(ctx, ids[i])
-				if m != nil {
-					models[i] = *m
-				}
-			}(i)
-		}
-		wg.Wait()
-
-		return models, nil
-	})
-
-	return v.([]T)
-}
-
-func (s *baseImpl[T]) scan(ctx context.Context, sql dbInterface, values ...any) []T {
-	var (
-		sqlKey = fmt.Sprintf("%s:%s", findAllPrefixKey, sql.String())
+		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
 	)
 	models, _, _ := s.g.Do(sqlKey, func() (interface{}, error) {
 		var (
 			logger = log.WithCtx(ctx)
-			models = make([]T, 0)
+			models = make([]interface{}, 0)
 		)
 
 		err := sql.Model(&models).Scan(ctx, values...)
@@ -197,14 +128,15 @@ func (s *baseImpl[T]) scan(ctx context.Context, sql dbInterface, values ...any) 
 		return models, nil
 	})
 
-	return models.([]T)
+	return models.([]interface{})
 }
 
-func (s *baseImpl[T]) scanOne(ctx context.Context, sql dbInterface, values ...any) *T {
+func (s *baseImpl[T]) scanOne(ctx context.Context, sql dbInterface, values ...any) interface{} {
 	var (
-		sqlKey = fmt.Sprintf("%s:%s", findAllPrefixKey, sql.String())
+		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
 		logger = log.WithCtx(ctx)
 	)
+
 	v, err, _ := s.g.Do(sqlKey, func() (interface{}, error) {
 		var (
 			m = commontil.InitStructFromGeneric[T]()
@@ -227,10 +159,10 @@ func (s *baseImpl[T]) scanOne(ctx context.Context, sql dbInterface, values ...an
 		return nil
 	}
 
-	return v.(*T)
+	return v.(interface{})
 }
 
-func (s *baseImpl[T]) insert(ctx context.Context, model *T) (r dbsql.Result, err error) {
+func (s *baseImpl[T]) insert(ctx context.Context, model interface{}) (r dbsql.Result, err error) {
 	var (
 		db        = orm.GetDB()
 		logger    = log.WithCtx(ctx)
@@ -248,7 +180,7 @@ func (s *baseImpl[T]) insert(ctx context.Context, model *T) (r dbsql.Result, err
 	return r, err
 }
 
-func (s *baseImpl[T]) insertAll(ctx context.Context, models []T) (m []T, r dbsql.Result, err error) {
+func (s *baseImpl[T]) insertAll(ctx context.Context, models []interface{}) (m []interface{}, r dbsql.Result, err error) {
 	if len(models) == 0 {
 		return
 	}
@@ -265,35 +197,35 @@ func (s *baseImpl[T]) insertAll(ctx context.Context, models []T) (m []T, r dbsql
 		return
 	}
 
-	go rd.HMSet(commontil.CopyContext(ctx), models)
+	//go rd.HMSet(commontil.CopyContext(ctx), models)
 
 	return models, r, err
 }
 
-func (s *baseImpl[T]) InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error {
-	var (
-		logger = log.WithCtx(ctx)
-	)
+//func (s *baseImpl[T]) InsertWithTx(ctx context.Context, tx bun.IDB, m interface{}) error {
+//	var (
+//		logger = log.WithCtx(ctx)
+//	)
+//
+//	_, err := tx.NewInsert().Model(m).Returning("*").Exec(ctx)
+//	if err != nil {
+//		logger.Error(err.Error(), zap.Any("model", m))
+//		return err
+//	}
+//	//go rd.HSet(commontil.CopyContext(ctx), m)
+//	return err
+//}
 
-	_, err := tx.NewInsert().Model(m).Returning("*").Exec(ctx)
-	if err != nil {
-		logger.Error(err.Error(), zap.Any("model", m))
-		return err
-	}
-	//go rd.HSet(commontil.CopyContext(ctx), m)
-	return err
-}
-
-func (s *baseImpl[T]) UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error {
-	var (
-		logger = log.WithCtx(ctx)
-	)
-
-	_, err := tx.NewUpdate().Model(m).Where(whereIDTmpl, id).Returning("*").Exec(ctx)
-	if err != nil {
-		logger.Error(err.Error(), zap.Any("model", m))
-		return err
-	}
-	//go rd.HSet(commontil.CopyContext(ctx), *m)
-	return err
-}
+//func (s *baseImpl[T]) UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m interface{}) error {
+//	var (
+//		logger = log.WithCtx(ctx)
+//	)
+//
+//	_, err := tx.NewUpdate().Model(m).Where(whereIDTmpl, id).Returning("*").Exec(ctx)
+//	if err != nil {
+//		logger.Error(err.Error(), zap.Any("model", m))
+//		return err
+//	}
+//	//go rd.HSet(commontil.CopyContext(ctx), *m)
+//	return err
+//}
