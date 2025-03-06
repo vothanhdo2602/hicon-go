@@ -5,15 +5,14 @@ import (
 	dbsql "database/sql"
 	"errors"
 	"fmt"
-	"github.com/vothanhdo2602/hicon/external/config"
-	"github.com/vothanhdo2602/hicon/external/util/sftil"
-	"sync"
-
 	"github.com/uptrace/bun"
+	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
+	"github.com/vothanhdo2602/hicon/external/util/sftil"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"go.uber.org/zap"
+	"sync"
 )
 
 const (
@@ -32,7 +31,7 @@ type dbInterface interface {
 }
 
 type BaseInterface[T any] interface {
-	FindByPrimaryKeys(ctx context.Context, id string, md *ModelParams) (m *T, err error, shared bool)
+	FindByPrimaryKeys(ctx context.Context, id string, md *ModelParams) (m interface{}, err error, shared bool)
 	//InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
 	//UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
 }
@@ -54,25 +53,16 @@ type ModelParams struct {
 	LockKey      string
 }
 
-func (s *baseImpl[T]) FindByPrimaryKeys(ctx context.Context, id string, md *ModelParams) (m *T, err error, shared bool) {
+func (s *baseImpl[T]) FindByPrimaryKeys(ctx context.Context, id string, md *ModelParams) (interface{}, error, bool) {
 	var (
 		key = fmt.Sprintf("%s:%s", FindByPrimaryKeysAction, id)
 	)
 
-	chResult := s.g.DoChan(key, func() (interface{}, error) {
+	v, err, shared := s.g.Do(key, func() (interface{}, error) {
 		return s.FindByPrimaryKeysWithCacheOpts(ctx, id, md)
 	})
 
-	result := <-chResult
-
-	if result.Err != nil {
-		return nil, result.Err, shared
-	}
-	if result.Val == nil {
-		return
-	}
-
-	return result.Val.(*T), err, result.Shared
+	return v.(*T), err, shared
 }
 
 func (s *baseImpl[T]) FindByPrimaryKeysWithCacheOpts(ctx context.Context, id string, md *ModelParams) (interface{}, error) {

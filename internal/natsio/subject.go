@@ -17,8 +17,8 @@ func GenerateQueueNameFromSubject(subject string) string {
 	return strings.ReplaceAll(subject, ".", "_")
 }
 
-func GetUpdateConfigSubject() string {
-	return GenerateReqrepSubject(UpdateConfigChannel)
+func GetUpsertConfigurationSubject() string {
+	return GenerateReqrepSubject(UpsertConfigurationChannel)
 }
 
 func GetFindByPrimaryKeysSubject() string {

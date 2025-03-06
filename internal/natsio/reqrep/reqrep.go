@@ -9,13 +9,13 @@ import (
 	"time"
 )
 
-func UpdateConfig(ctx context.Context, data *requestmodel.UpdateConfig) error {
+func UpsertConfiguration(ctx context.Context, data *requestmodel.UpsertConfiguration) error {
 	var (
 		resp natstil.BaseResponse[any]
 	)
 
 	req, _ := pjson.Marshal(ctx, data)
-	msg, err := natsio.GetNC().Request(natsio.GetUpdateConfigSubject(), req, 10*time.Second)
+	msg, err := natsio.GetNC().Request(natsio.GetUpsertConfigurationSubject(), req, 10*time.Second)
 	if err != nil {
 		return err
 	}
@@ -34,6 +34,7 @@ func FindByPrimaryKeys(ctx context.Context, data *requestmodel.FindByPrimaryKeys
 	)
 
 	req, _ := pjson.Marshal(ctx, data)
+
 	msg, err := natsio.GetNC().Request(natsio.GetFindByPrimaryKeysSubject(), req, 10*time.Second)
 	if err != nil {
 		return nil, err

@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"time"
 )
@@ -26,15 +27,8 @@ type ENV struct {
 		}
 	}
 	Common struct {
-		Server struct {
-			Host string
-			Port int
-		}
-		Admin struct {
-			Domain string
-			Host   string
-			Port   int
-		}
+		Host string
+		Port int
 	}
 }
 
@@ -87,6 +81,15 @@ type ColumnConfig struct {
 }
 
 var env ENV
+
+func Init() {
+	env.Common.Host = "0.0.0.0"
+	env.Common.Port = 7979
+}
+
+func GetAddr() string {
+	return fmt.Sprintf("%s:%d", env.Common.Host, env.Common.Port)
+}
 
 func GetENV() ENV {
 	return env

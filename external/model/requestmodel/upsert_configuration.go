@@ -5,7 +5,7 @@ import (
 	"github.com/vothanhdo2602/hicon/external/constant"
 )
 
-type UpdateConfig struct {
+type UpsertConfiguration struct {
 	DBConfiguration     *DBConfiguration
 	TableConfigurations []*TableConfiguration
 	Debug               bool
@@ -48,7 +48,7 @@ type RelationColumnConfigs struct {
 	Type     string
 }
 
-func (m *UpdateConfig) Validate() error {
+func (m *UpsertConfiguration) Validate() error {
 	return validation.ValidateStruct(
 		m,
 		validation.Field(&m.DBConfiguration, validation.Required),

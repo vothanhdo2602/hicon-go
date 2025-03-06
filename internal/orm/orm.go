@@ -104,3 +104,23 @@ func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) er
 func GetDB() bun.IDB {
 	return db
 }
+
+//func GetRealNumberOfConnectionsCanActive() int {
+//	var m map[string]int
+//	rows, err := db.Query(`
+//		SELECT
+//			count(*) FILTER (WHERE state = 'active') AS active_connections
+//		FROM pg_stat_activity
+//		WHERE backend_type = 'client backend';`,
+//	)
+//	if err != nil {
+//		return 0
+//	}
+//
+//	err = rows.Scan(&m)
+//	if err != nil {
+//		return 0
+//	}
+//
+//	return m["active_connections"]
+//}

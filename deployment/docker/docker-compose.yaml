@@ -5,12 +5,19 @@ networks:
 services:
   nats:
     container_name: nats
-    image: bitnami/nats
+    image: nats
     restart: always
     ports:
       - "4222:4222"
       - "6222:6222"
       - "8222:8222"
+    command: -js
+    volumes:
+      - ./nats:/bitnami/nats
+    environment:
+      - NATS_ENABLE_AUTH=yes
+      - NATS_USERNAME=myuser
+      - NATS_PASSWORD=mypassword
     networks:
       - hicon
 

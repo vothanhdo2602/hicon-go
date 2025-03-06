@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+//import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+option csharp_namespace = "MyCompany.Internal.Types.Grpc";
+option go_package = "./sqlexecutor";
+
+package hicon.type;
+
+message BaseResponse {
+  bool shared = 1;
+  int32 status = 2;
+  bool success = 3;
+  string message = 4;
+  google.protobuf.Any data = 5;
+}
+
+// TLS Configuration for Secure Connections
+message TLS {
+  string cert_pem = 1;
+  string private_key_pem = 2;
+  string root_ca_pem = 3;
+}
+
+// Database Configuration
+message DBConfiguration {
+  string type = 1;
+  string host = 2;
+  int32 port = 3;
+  string username = 4;
+  string password = 5;
+  string database = 6;
+  int32 max_cons = 7;
+  TLS TLS = 8;
+}
+
+// Column Configuration for Table
+message ColumnConfig {
+  string name = 1;
+  string type = 2;
+  bool nullable = 3;
+  bool is_primary_key = 4;
+}
+
+// Relation Column Configuration
+message RelationColumnConfigs {
+  string name = 1;
+  string ref_table = 2;
+  string type = 3;
+}
+
+// Table Configuration
+message TableConfiguration {
+  string name = 1;
+  repeated ColumnConfig column_configs = 2;
+  repeated RelationColumnConfigs relation_column_configs = 3;
+}
+
+// Main Upsert Configuration
+message UpsertConfiguration {
+  DBConfiguration db_configuration = 1;
+  repeated TableConfiguration table_configurations = 2;
+  bool debug = 3;
+  bool disable_cache = 4;
+}
+
+message FindByPrimaryKeys {
+  string table = 1;
+  bool disable_cache = 2;
+  map<string, google.protobuf.Any> primary_keys = 3;
+}

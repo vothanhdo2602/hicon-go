@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	nc *nats.Conn
-	js jetstream.JetStream
+	nc    *nats.Conn
+	jsCtx nats.JetStreamContext
+	js    jetstream.JetStream
 )
 
 func Init(ctx context.Context, wg *sync.WaitGroup) (err error) {
@@ -31,6 +32,12 @@ func Init(ctx context.Context, wg *sync.WaitGroup) (err error) {
 		return
 	}
 
+	jsCtx, err = nc.JetStream(nats.PublishAsyncMaxPending(10000))
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
 	js, err = jetstream.New(nc)
 	if err != nil {
 		logger.Error(err.Error())
@@ -42,8 +49,6 @@ func Init(ctx context.Context, wg *sync.WaitGroup) (err error) {
 		logger.Error(err.Error())
 		return
 	}
-
-	nats.MaxPingsOutstanding(100000)
 
 	logger.Info(fmt.Sprintf("⚡️[natsio]: connected to %s", nats.DefaultURL))
 
@@ -59,10 +64,6 @@ func GetJs() jetstream.JetStream {
 }
 
 func RegisterReqrep(ctx context.Context) (err error) {
-	if err = ReqrepQueueSubscribe(ctx, GetUpdateConfigSubject(), handler.UpdateConfig); err != nil {
-		return
-	}
-
 	if err = ReqrepQueueSubscribe(ctx, GetFindByPrimaryKeysSubject(), handler.FindByPrimaryKeys); err != nil {
 		return
 	}

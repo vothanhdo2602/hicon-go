@@ -9,6 +9,10 @@ import (
 	"sync"
 )
 
+var (
+	m map[string]*call // lazily initialized
+)
+
 // errGoexit indicates the runtime.Goexit was called in
 // the user given function.
 var errGoexit = errors.New("runtime.Goexit was called")
@@ -65,8 +69,7 @@ type call struct {
 // Group represents a class of work and forms a namespace in
 // which units of work can be executed with duplicate suppression.
 type Group struct {
-	mu sync.Mutex       // protects m
-	m  map[string]*call // lazily initialized
+	mu sync.Mutex // protects m
 }
 
 // Result holds the results of Do, so they can be passed
@@ -84,10 +87,12 @@ type Result struct {
 // The return value shared indicates whether v was given to multiple callers.
 func (g *Group) Do(key string, fn func() (interface{}, error)) (v interface{}, err error, shared bool) {
 	g.mu.Lock()
-	if g.m == nil {
-		g.m = make(map[string]*call)
+	if m == nil {
+		m = make(map[string]*call)
 	}
-	if c, ok := g.m[key]; ok {
+
+	fmt.Println("lost 1", m)
+	if c, ok := m[key]; ok {
 		c.dups++
 		g.mu.Unlock()
 		c.wg.Wait()
@@ -99,12 +104,15 @@ func (g *Group) Do(key string, fn func() (interface{}, error)) (v interface{}, e
 		}
 		return c.val, c.err, true
 	}
+
 	c := new(call)
 	c.wg.Add(1)
-	g.m[key] = c
+	m[key] = c
+	fmt.Println("lost 2", m)
 	g.mu.Unlock()
 
 	g.doCall(c, key, fn)
+	fmt.Println("lost 3", m)
 	return c.val, c.err, c.dups > 0
 }
 
@@ -115,10 +123,10 @@ func (g *Group) Do(key string, fn func() (interface{}, error)) (v interface{}, e
 func (g *Group) DoChan(key string, fn func() (interface{}, error)) <-chan Result {
 	ch := make(chan Result, 1)
 	g.mu.Lock()
-	if g.m == nil {
-		g.m = make(map[string]*call)
+	if m == nil {
+		m = make(map[string]*call)
 	}
-	if c, ok := g.m[key]; ok {
+	if c, ok := m[key]; ok {
 		c.dups++
 		c.chans = append(c.chans, ch)
 		g.mu.Unlock()
@@ -126,7 +134,7 @@ func (g *Group) DoChan(key string, fn func() (interface{}, error)) <-chan Result
 	}
 	c := &call{chans: []chan<- Result{ch}}
 	c.wg.Add(1)
-	g.m[key] = c
+	m[key] = c
 	g.mu.Unlock()
 
 	go g.doCall(c, key, fn)
@@ -150,13 +158,13 @@ func (g *Group) doCall(c *call, key string, fn func() (interface{}, error)) {
 		g.mu.Lock()
 		defer g.mu.Unlock()
 		c.wg.Done()
-		if g.m[key] == c {
-			delete(g.m, key)
+		if m[key] == c {
+			delete(m, key)
 
-			var m runtime.MemStats
-			runtime.ReadMemStats(&m)
-			if m.Alloc/1024/1024 > 20 {
-				clear(g.m)
+			var mem runtime.MemStats
+			runtime.ReadMemStats(&mem)
+			if mem.Alloc/1024/1024 > 20 {
+				clear(m)
 			}
 		}
 
@@ -209,6 +217,6 @@ func (g *Group) doCall(c *call, key string, fn func() (interface{}, error)) {
 // an earlier call to complete.
 func (g *Group) Forget(key string) {
 	g.mu.Lock()
-	delete(g.m, key)
+	delete(m, key)
 	g.mu.Unlock()
 }
