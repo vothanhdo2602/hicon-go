@@ -23,7 +23,7 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 	}
 
 	var (
-		svc = service.SQLExecutor[any]()
+		svc = service.SQLExecutor()
 		req = &requestmodel.UpsertConfiguration{
 			DBConfiguration: &requestmodel.DBConfiguration{
 				Type:     data.DbConfiguration.Type,
@@ -91,7 +91,7 @@ func (SQLExecutor) FindByPrimaryKeys(ctx context.Context, data *sqlexecutor.Find
 			DisableCache: data.DisableCache,
 			PrimaryKeys:  AnyMapToInterfaceMap(data.PrimaryKeys),
 		}
-		svc = service.SQLExecutor[any]()
+		svc = service.SQLExecutor()
 	)
 
 	svc.FindByPrimaryKeys(ctx, req)

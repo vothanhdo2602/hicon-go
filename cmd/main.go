@@ -4,16 +4,19 @@ import (
 	"context"
 	"fmt"
 	"github.com/vothanhdo2602/hicon/external/config"
+	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/grpctil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/wkrtil"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/internal/grpcapi"
 	"github.com/vothanhdo2602/hicon/internal/natsio"
+	"github.com/vothanhdo2602/hicon/internal/natsio/reqrep"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/anypb"
 	"net"
+	"time"
 )
 
 func main() {
@@ -43,19 +46,21 @@ func main() {
 	go func() {
 		UpsertConfiguration(ctx)
 
-		FindByPrimaryKeys(ctx)
+		time.Sleep(2 * time.Second)
+		for i := 0; i < 10000; i++ {
+			go FindByPrimaryKeys(ctx)
+		}
 	}()
 
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
-	logger.Info(fmt.Sprintf("⚡️[grpc server]: listen on %s", addr))
 
+	logger.Info(fmt.Sprintf("⚡️[grpc server]: listen on %s", addr))
 	if err = srv.Serve(l); err != nil {
 		logger.Fatal(err.Error())
 	}
-
 }
 
 func UpsertConfiguration(ctx context.Context) {
@@ -117,18 +122,28 @@ func FindByPrimaryKeys(ctx context.Context) {
 		}
 	)
 
-	for i := 0; i < 10; i++ {
-		go func() {
-			conn, err := grpctil.NewClient()
-			if err != nil {
-				return
-			}
-			defer conn.Close()
+	conn, err := grpctil.NewClient()
+	if err != nil {
+		return
+	}
+	defer conn.Close()
 
-			_, err = sqlexecutor.NewSQLExecutorClient(conn).FindByPrimaryKeys(ctx, req)
-			if err != nil {
-				return
-			}
-		}()
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).FindByPrimaryKeys(ctx, req)
+	if err != nil {
+		return
+	}
+}
+
+func FindByPrimaryKeysReqrep(ctx context.Context) {
+	var (
+		req = &requestmodel.FindByPrimaryKeys{
+			Table: "users",
+			PrimaryKeys: map[string]interface{}{
+				"id": "67c567cd8b606b2293af1519",
+			},
+		}
+	)
+
+	if _, err := reqrep.FindByPrimaryKeys(ctx, req); err != nil {
 	}
 }

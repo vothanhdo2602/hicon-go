@@ -33,7 +33,7 @@ type WorkerPool struct {
 
 func NewWorkerPool() *WorkerPool {
 	wp = &WorkerPool{
-		numWorkers: runtime.GOMAXPROCS(0),
+		numWorkers: runtime.NumCPU(),
 		jobs:       make(chan *Job),
 		done:       make(chan bool),
 	}
@@ -77,7 +77,7 @@ func (s *WorkerPool) SendJob(fn func(*Job), cb func(r chan *Result)) {
 	if fn == nil {
 		return
 	}
-	j := &Job{Handler: fn, ChResult: make(chan *Result, 1)}
+	j := &Job{Handler: fn}
 	s.Submit(j)
 	if cb != nil {
 		cb(j.ChResult)

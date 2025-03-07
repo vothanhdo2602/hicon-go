@@ -13,22 +13,29 @@ import (
 	"strings"
 )
 
-type SQLExecutorInterface[T any] interface {
+var (
+	sqlExecutor *sqlExecutorImpl
+)
+
+type SQLExecutorInterface interface {
 	UpdateConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse
 	FindByPrimaryKeys(ctx context.Context, req *requestmodel.FindByPrimaryKeys) *responsemodel.BaseResponse
 }
 
-type sqlExecuteImpl[T any] struct {
-	dao dao.SQLExecutorInterface[T]
+type sqlExecutorImpl struct {
+	dao dao.SQLExecutorInterface
 }
 
-func SQLExecutor[T any]() SQLExecutorInterface[T] {
-	return &sqlExecuteImpl[T]{
-		dao: dao.SQLExecutor[T](),
+func SQLExecutor() SQLExecutorInterface {
+	if sqlExecutor == nil {
+		sqlExecutor = &sqlExecutorImpl{
+			dao: dao.SQLExecutor(),
+		}
 	}
+	return sqlExecutor
 }
 
-func (s *sqlExecuteImpl[T]) UpdateConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse {
+func (s *sqlExecutorImpl) UpdateConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse {
 	if err := req.Validate(); err != nil {
 		return responsemodel.R400(err.Error())
 	}
@@ -117,9 +124,9 @@ func (s *sqlExecuteImpl[T]) UpdateConfiguration(ctx context.Context, req *reques
 	return responsemodel.R200(nil, false)
 }
 
-func (s *sqlExecuteImpl[T]) FindByPrimaryKeys(ctx context.Context, req *requestmodel.FindByPrimaryKeys) *responsemodel.BaseResponse {
+func (s *sqlExecutorImpl) FindByPrimaryKeys(ctx context.Context, req *requestmodel.FindByPrimaryKeys) *responsemodel.BaseResponse {
 	var (
-		d     = dao.SQLExecutor[T]()
+		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfiguration
 		md    = &dao.ModelParams{
 			Database: dbCfg.Database,
@@ -155,7 +162,7 @@ func (s *sqlExecuteImpl[T]) FindByPrimaryKeys(ctx context.Context, req *requestm
 
 	id := strings.Join(arrKeys, ";")
 
-	data, err, shared := d.FindByPrimaryKeys(ctx, id, md)
+	data, err, shared := d.FindByPrimaryKeys(ctx, req.PrimaryKeys, id, md)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}

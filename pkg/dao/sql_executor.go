@@ -1,12 +1,19 @@
 package dao
 
-type SQLExecutorInterface[T any] interface {
-	BaseInterface[T]
+var (
+	sqlExecutor *sqlExecutorImpl
+)
+
+type SQLExecutorInterface interface {
+	BaseInterface
 }
-type sqlExecutorImpl[T any] struct {
-	baseImpl[T]
+type sqlExecutorImpl struct {
+	baseImpl
 }
 
-func SQLExecutor[T any]() SQLExecutorInterface[T] {
-	return &sqlExecutorImpl[T]{}
+func SQLExecutor() SQLExecutorInterface {
+	if sqlExecutor == nil {
+		sqlExecutor = &sqlExecutorImpl{}
+	}
+	return sqlExecutor
 }
