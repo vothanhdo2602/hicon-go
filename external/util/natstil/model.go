@@ -6,4 +6,5 @@ type BaseResponse[T any] struct {
 	Message string
 	Shared  bool
 	Success bool
+	Version string
 }
