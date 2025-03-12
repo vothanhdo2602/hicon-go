@@ -13,7 +13,8 @@ message BaseResponse {
   int32 status = 2;
   bool success = 3;
   string message = 4;
-  google.protobuf.Any data = 5;
+  string version = 7;
+  google.protobuf.Any data = 6;
 }
 
 // TLS Configuration for Secure Connections
@@ -48,7 +49,8 @@ message RelationColumnConfigs {
   string name = 1;
   string ref_table = 2;
   string type = 3;
-}
+  string join = 4;
+} 
 
 // Table Configuration
 message TableConfiguration {
@@ -65,8 +67,49 @@ message UpsertConfiguration {
   bool disable_cache = 4;
 }
 
+message Where {
+  string condition = 1;
+  repeated Value args = 2;
+}
+
+message Value {
+  oneof kind {
+    string string_value = 1;
+    int64 int_value = 2;
+    double float_value = 3;
+    bool bool_value = 4;
+    bytes bytes_value = 5;
+  }
+}
+
+message Relation {
+  string name = 1;
+}
+
 message FindByPrimaryKeys {
   string table = 1;
   bool disable_cache = 2;
   map<string, google.protobuf.Any> primary_keys = 3;
+  repeated string select = 4;
+}
+
+message FindOne {
+  string table = 1;
+  bool disable_cache = 2;
+  repeated string select = 3;
+  repeated Where where = 4;
+  repeated string relations = 5;
+  int64 offset = 6;
+  repeated string order_by = 7;
+}
+
+message FindAll {
+  string table = 1;
+  bool disable_cache = 2;
+  repeated string select = 3;
+  repeated Where where = 4;
+  repeated Relation relations = 5;
+  int64 offset = 6;
+  int64 limit = 7;
+  repeated string order_by = 8;
 }

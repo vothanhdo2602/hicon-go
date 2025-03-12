@@ -26,7 +26,7 @@ func main() {
 	var (
 		ctx    = context.Background()
 		logger = log.WithCtx(ctx)
-		srv    = grpc.NewServer()
+		srv    = grpc.NewServer(grpc.MaxConcurrentStreams(0))
 		addr   = config.GetAddr()
 	)
 
@@ -47,9 +47,12 @@ func main() {
 		UpsertConfiguration(ctx)
 
 		time.Sleep(2 * time.Second)
-		for i := 0; i < 10000; i++ {
-			go FindByPrimaryKeys(ctx)
-		}
+
+		//for i := 0; i < 100000; i++ {
+		go FindOne(ctx)
+		//go FindByPrimaryKeys(ctx)
+		//go FindByPrimaryKeysReqrep(ctx)
+		//}
 	}()
 
 	l, err := net.Listen("tcp", addr)
@@ -58,6 +61,8 @@ func main() {
 	}
 
 	logger.Info(fmt.Sprintf("⚡️[grpc server]: listen on %s", addr))
+
+	defer srv.GracefulStop()
 	if err = srv.Serve(l); err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -84,7 +89,7 @@ func UpsertConfiguration(ctx context.Context) {
 						{Name: "type", Type: "string"},
 					},
 					RelationColumnConfigs: []*sqlexecutor.RelationColumnConfigs{
-						{Name: "profile", Type: orm.BelongTo, RefTable: "profiles"},
+						{Name: "profile", Type: orm.HasOne, RefTable: "profiles", Join: "id=user_id"},
 					},
 				},
 				{
@@ -104,7 +109,6 @@ func UpsertConfiguration(ctx context.Context) {
 	if err != nil {
 		return
 	}
-	defer conn.Close()
 
 	_, err = sqlexecutor.NewSQLExecutorClient(conn).UpsertConfiguration(ctx, req)
 	if err != nil {
@@ -119,6 +123,7 @@ func FindByPrimaryKeys(ctx context.Context) {
 			PrimaryKeys: map[string]*anypb.Any{
 				"id": grpcapi.InterfaceToAnyPb("67c567cd8b606b2293af1519"),
 			},
+			//Select: []string{"id"},
 		}
 	)
 
@@ -126,12 +131,41 @@ func FindByPrimaryKeys(ctx context.Context) {
 	if err != nil {
 		return
 	}
-	defer conn.Close()
 
-	_, err = sqlexecutor.NewSQLExecutorClient(conn).FindByPrimaryKeys(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindByPrimaryKeys(ctx, req)
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		return
+	}
+
+	fmt.Println("resp", resp.Data)
+}
+
+func FindOne(ctx context.Context) {
+	var (
+		req = &sqlexecutor.FindOne{
+			Table:        "users",
+			DisableCache: true,
+			Select:       []string{},
+			Where:        []*sqlexecutor.Where{},
+			Relations:    []string{"Profile"},
+			Offset:       0,
+			OrderBy:      []string{},
+		}
+	)
+
+	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
+
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindOne(ctx, req)
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		return
+	}
+
+	fmt.Println("resp", resp.Data)
 }
 
 func FindByPrimaryKeysReqrep(ctx context.Context) {
@@ -144,6 +178,13 @@ func FindByPrimaryKeysReqrep(ctx context.Context) {
 		}
 	)
 
-	if _, err := reqrep.FindByPrimaryKeys(ctx, req); err != nil {
+	resp, err := reqrep.FindByPrimaryKeys(ctx, req)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	if resp.Data == nil {
+		fmt.Println("resp", resp.Data)
 	}
 }

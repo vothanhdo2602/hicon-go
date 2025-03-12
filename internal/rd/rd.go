@@ -44,6 +44,10 @@ func Init(ctx context.Context, wg *sync.WaitGroup) {
 	logger.Info(fmt.Sprintf("⚡️[redis]: connected to %s", addr))
 }
 
+func GetRedis() *redis.Client {
+	return client
+}
+
 func HSet[T entity.BaseEntity[T]](ctx context.Context, database, table string, m T) {
 	var (
 		logger = log.WithCtx(ctx)

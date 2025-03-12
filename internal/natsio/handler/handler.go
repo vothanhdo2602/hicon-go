@@ -131,17 +131,7 @@ func FindByPrimaryKeys(msg *nats.Msg) {
 		defer commontil.Recover(ctx)
 		defer natstil.Response(ctx, msg)
 
-		if err := config.ConfigurationUpdated(); err != nil {
-			msg.Data = natstil.R400(err.Error())
-			return
-		}
-
 		if err := pjson.Unmarshal(ctx, msg.Data, &data); err != nil {
-			msg.Data = natstil.R400(err.Error())
-			return
-		}
-
-		if err := data.Validate(); err != nil {
 			msg.Data = natstil.R400(err.Error())
 			return
 		}
@@ -149,13 +139,10 @@ func FindByPrimaryKeys(msg *nats.Msg) {
 		var (
 			svc = service.SQLExecutor()
 		)
-		//
-		_ = svc.FindByPrimaryKeys(ctx, &data)
+
+		resp := svc.FindByPrimaryKeys(ctx, &data)
+		msg.Data = natstil.R200(resp)
 	}(msg)
-	//if err != nil {
-	//	msg.Data = natstil.R400(err.Error())
-	//	return
-	//}
 }
 
 func FindOne(msg *nats.Msg) {

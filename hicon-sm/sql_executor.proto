@@ -7,4 +7,5 @@ option go_package = "./sqlexecutor";
 service SQLExecutor {
   rpc UpsertConfiguration(hicon.type.UpsertConfiguration) returns (hicon.type.BaseResponse) {}
   rpc FindByPrimaryKeys(hicon.type.FindByPrimaryKeys) returns (hicon.type.BaseResponse) {}
+  rpc FindOne(hicon.type.FindOne) returns (hicon.type.BaseResponse) {}
 }

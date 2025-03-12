@@ -11,5 +11,13 @@ var (
 )
 
 func NewClient() (*grpc.ClientConn, error) {
-	return grpc.NewClient(config.GetAddr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if conn == nil {
+		newConn, err := grpc.NewClient(config.GetAddr(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return nil, err
+		}
+		conn = newConn
+	}
+
+	return conn, nil
 }

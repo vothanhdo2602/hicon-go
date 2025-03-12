@@ -46,6 +46,7 @@ type RelationColumnConfigs struct {
 	Name     string
 	RefTable string
 	Type     string
+	Join     string
 }
 
 func (m *UpsertConfiguration) Validate() error {
@@ -68,6 +69,7 @@ func (m *DBConfiguration) Validate() error {
 type FindByPrimaryKeys struct {
 	Table        string
 	DisableCache bool
+	Select       []string
 	PrimaryKeys  map[string]interface{}
 }
 
@@ -83,8 +85,19 @@ type FindOne struct {
 	Table        string
 	DisableCache bool
 	Select       []string
-	Wheres       []*Where
-	Relations    []*Relation
+	Where        []*Where
+	Relations    []string
+	Offset       int
+	OrderBy      []string
+}
+
+type FindAll struct {
+	Table        string
+	DisableCache bool
+	Select       []string
+	Where        []*Where
+	Relations    []string
+	Limit        int
 	Offset       int
 	OrderBy      []string
 }
@@ -95,7 +108,7 @@ type Where struct {
 }
 
 type Relation struct {
-	Type string
+	Name string
 }
 
 func (m *FindOne) Validate() error {

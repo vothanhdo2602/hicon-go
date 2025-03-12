@@ -7,8 +7,6 @@ import (
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/pkg/service"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type SQLExecutor struct {
@@ -70,6 +68,7 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 				Name:     c.Name,
 				RefTable: c.RefTable,
 				Type:     c.Type,
+				Join:     c.Join,
 			}
 			tbl.RelationColumnConfigs = append(tbl.RelationColumnConfigs, col)
 		}
@@ -90,11 +89,44 @@ func (SQLExecutor) FindByPrimaryKeys(ctx context.Context, data *sqlexecutor.Find
 			Table:        data.Table,
 			DisableCache: data.DisableCache,
 			PrimaryKeys:  AnyMapToInterfaceMap(data.PrimaryKeys),
+			Select:       data.Select,
 		}
 		svc = service.SQLExecutor()
 	)
 
-	svc.FindByPrimaryKeys(ctx, req)
+	resp := svc.FindByPrimaryKeys(ctx, req)
 
-	return nil, status.Errorf(codes.Unimplemented, "method FindByPrimaryKeys not implemented")
+	return NewResponse(resp), nil
+}
+
+func (SQLExecutor) FindOne(ctx context.Context, data *sqlexecutor.FindOne) (*sqlexecutor.BaseResponse, error) {
+	defer commontil.Recover(ctx)
+
+	var (
+		req = &requestmodel.FindOne{
+			Table:        data.Table,
+			DisableCache: data.DisableCache,
+			Select:       data.Select,
+			Offset:       int(data.Offset),
+			OrderBy:      data.OrderBy,
+		}
+		svc = service.SQLExecutor()
+	)
+
+	for _, protoWhere := range data.Where {
+		w, err := ConvertWhereProtoToGo(protoWhere)
+		if err != nil {
+			return NewResponse(responsemodel.R400(err.Error())), nil
+		}
+
+		req.Where = append(req.Where, w)
+	}
+
+	for _, rel := range data.Relations {
+		req.Relations = append(req.Relations, rel)
+	}
+
+	resp := svc.FindOne(ctx, req)
+
+	return NewResponse(resp), nil
 }

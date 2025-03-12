@@ -3,11 +3,13 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"github.com/vothanhdo2602/hicon/internal/orm"
+	"github.com/vothanhdo2602/hicon/internal/rd"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
 	"reflect"
 	"strings"
@@ -20,6 +22,7 @@ var (
 type SQLExecutorInterface interface {
 	UpdateConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse
 	FindByPrimaryKeys(ctx context.Context, req *requestmodel.FindByPrimaryKeys) *responsemodel.BaseResponse
+	FindOne(ctx context.Context, req *requestmodel.FindOne) *responsemodel.BaseResponse
 }
 
 type sqlExecutorImpl struct {
@@ -53,6 +56,7 @@ func (s *sqlExecutorImpl) UpdateConfiguration(ctx context.Context, req *requestm
 		ModelRegistry: &config.ModelRegistry{
 			TableConfigurations: map[string]*config.TableConfiguration{},
 			Models:              map[string][]reflect.StructField{},
+			Entities:            map[string]interface{}{},
 		},
 	}
 
@@ -91,6 +95,7 @@ func (s *sqlExecutorImpl) UpdateConfiguration(ctx context.Context, req *requestm
 				Name:     col.Name,
 				RefTable: col.RefTable,
 				Type:     col.Type,
+				Join:     col.Join,
 			}
 		}
 
@@ -129,8 +134,9 @@ func (s *sqlExecutorImpl) FindByPrimaryKeys(ctx context.Context, req *requestmod
 		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfiguration
 		md    = &dao.ModelParams{
-			Database: dbCfg.Database,
-			Table:    req.Table,
+			Database:     dbCfg.GetDatabaseName(),
+			Table:        req.Table,
+			DisableCache: isDisableCache(req.DisableCache),
 		}
 		tableRegistry = dbCfg.ModelRegistry.TableConfigurations[md.Table]
 		arrKeys       []string
@@ -148,10 +154,6 @@ func (s *sqlExecutorImpl) FindByPrimaryKeys(ctx context.Context, req *requestmod
 		return responsemodel.R400(fmt.Sprintf("table %s not found in registerd model", req.Table))
 	}
 
-	if dbCfg.DisableCache || req.DisableCache {
-		md.DisableCache = req.DisableCache
-	}
-
 	for k := range tableRegistry.PrimaryColumns {
 		v, ok := req.PrimaryKeys[k]
 		if !ok {
@@ -167,5 +169,129 @@ func (s *sqlExecutorImpl) FindByPrimaryKeys(ctx context.Context, req *requestmod
 		return responsemodel.R400(err.Error())
 	}
 
+	if len(req.Select) > 0 {
+		newModel, err := config.TransformModel(req.Table, req.Select, data)
+		if err != nil {
+			return responsemodel.R400(err.Error())
+		}
+
+		return responsemodel.R200(newModel, shared)
+	}
+
 	return responsemodel.R200(data, shared)
+}
+
+func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne) *responsemodel.BaseResponse {
+	var (
+		d     = dao.SQLExecutor()
+		dbCfg = config.GetENV().DB.DBConfiguration
+		md    = &dao.ModelParams{
+			Database:     dbCfg.GetDatabaseName(),
+			Table:        req.Table,
+			DisableCache: isDisableCache(req.DisableCache),
+		}
+		m   = config.GetModelRegistry().GetNewModel(md.Table)
+		sql = orm.GetDB().NewSelect().Model(m)
+	)
+
+	sql.Offset(req.Offset)
+
+	for _, v := range req.Where {
+		sql.Where(v.Condition, v.Args...)
+	}
+
+	for _, v := range req.Relations {
+		sql.Relation(v)
+	}
+
+	for _, v := range req.OrderBy {
+		sql.Order(v)
+	}
+
+	data, err, shared := d.ScanOne(ctx, sql, m, md)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	if len(req.Select) > 0 {
+		newModel, err := config.TransformModel(req.Table, req.Select, data)
+		if err != nil {
+			return responsemodel.R400(err.Error())
+		}
+
+		return responsemodel.R200(newModel, shared)
+	}
+
+	return responsemodel.R200(data, shared)
+}
+
+func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll) *responsemodel.BaseResponse {
+	var (
+		d     = dao.SQLExecutor()
+		dbCfg = config.GetENV().DB.DBConfiguration
+		md    = &dao.ModelParams{
+			Database:     dbCfg.GetDatabaseName(),
+			Table:        req.Table,
+			DisableCache: isDisableCache(req.DisableCache),
+		}
+		m   = config.GetModelRegistry().GetNewModel(md.Table)
+		sql = orm.GetDB().NewSelect().Model(m)
+	)
+
+	if req.Limit > 0 {
+		sql.Limit(req.Limit)
+	}
+
+	sql.Offset(req.Offset)
+
+	for _, v := range req.Where {
+		sql.Where(v.Condition, v.Args...)
+	}
+
+	for _, v := range req.Relations {
+		sql.Relation(v)
+	}
+
+	for _, v := range req.OrderBy {
+		sql.Order(v)
+	}
+
+	data, err, shared := d.ScanOne(ctx, sql, m, md)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	if len(req.Select) > 0 {
+		newModel, err := config.TransformModel(req.Table, req.Select, data)
+		if err != nil {
+			return responsemodel.R400(err.Error())
+		}
+
+		return responsemodel.R200(newModel, shared)
+	}
+
+	return responsemodel.R200(data, shared)
+}
+
+func isDisableCache(localCache bool) bool {
+	var (
+		env = config.GetENV()
+	)
+	if !env.DB.DBConfiguration.DisableCache || rd.GetRedis() == nil {
+		return env.DB.DBConfiguration.DisableCache
+	}
+
+	return localCache
+}
+
+type User struct {
+	bun.BaseModel `bun:"users"`
+	ID            string   `bun:"id,pk" redis:"id" json:"id"`
+	Type          string   `bun:"type,pk" redis:"type" json:"type"`
+	Profile       *Profile `json:"profile,omitempty" bun:"rel:has-one,join:id=user_id"`
+}
+
+type Profile struct {
+	ID   string `bun:"id,pk" redis:"id" json:"id"`
+	Name string `bun:"name,pk" redis:"name" json:"name"`
 }

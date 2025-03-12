@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
-	"github.com/vothanhdo2602/hicon/external/util/ptr"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"reflect"
@@ -15,7 +14,7 @@ import (
 // RelationType defines the type of relationship
 const (
 	HasOne        = "has-one"
-	BelongTo      = "belongs-to"
+	BelongsTo     = "belongs-to"
 	HasMany       = "has-many"
 	HasManyToMany = "has-many-to-many"
 )
@@ -76,12 +75,12 @@ func MapRelationToEntity(tableConfig *config.TableConfiguration, entities map[st
 		}
 
 		var (
-			fieldType interface{}
-			modelType = reflect.TypeOf(entities[col.RefTable])
+			fieldType reflect.Type
+			modelType = reflect.StructOf(entities[col.RefTable])
 		)
 		switch col.Type {
-		case HasOne, BelongTo:
-			fieldType = ptr.ToPtr(modelType)
+		case HasOne, BelongsTo:
+			fieldType = reflect.PointerTo(modelType)
 		case HasMany, HasManyToMany:
 			fieldType = reflect.SliceOf(modelType)
 		default:
@@ -91,8 +90,8 @@ func MapRelationToEntity(tableConfig *config.TableConfiguration, entities map[st
 		// Add field with both json and bun tags
 		field := reflect.StructField{
 			Name: cases.Title(language.English).String(colName),
-			Type: reflect.TypeOf(fieldType),
-			Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s" bun:"-"`, colName)),
+			Type: fieldType,
+			Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s,omitempty" bun:"rel:%s,join:%s"`, colName, col.Type, col.Join)),
 		}
 		entities[tableConfig.Name] = append(entities[tableConfig.Name], field)
 	}

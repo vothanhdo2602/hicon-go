@@ -19,10 +19,6 @@ const (
 	FindAllAction           = "find_all_action"
 )
 
-const (
-	whereIDTmpl = "id = ?"
-)
-
 type dbInterface interface {
 	String() string
 	Scan(ctx context.Context, values ...any) error
@@ -31,6 +27,7 @@ type dbInterface interface {
 
 type BaseInterface interface {
 	FindByPrimaryKeys(ctx context.Context, primaryKeys map[string]interface{}, id string, md *ModelParams) (m interface{}, err error, shared bool)
+	ScanOne(ctx context.Context, sql dbInterface, model interface{}, md *ModelParams, values ...any) (m interface{}, err error, shared bool)
 	//InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
 	//UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
 }
@@ -58,17 +55,19 @@ func (s *baseImpl) FindByPrimaryKeys(ctx context.Context, primaryKeys map[string
 	)
 
 	v, err, shared := s.g.Do(key, func() (interface{}, error) {
-		return s.FindByPrimaryKeysWithCacheOpts(ctx, primaryKeys, id, md)
+		var (
+			m = config.GetModelRegistry().GetNewModel(md.Table)
+		)
+		return s.FindByPrimaryKeysWithCacheOpts(ctx, primaryKeys, m, md)
 	})
 
 	return v, err, shared
 }
 
-func (s *baseImpl) FindByPrimaryKeysWithCacheOpts(ctx context.Context, primaryKeys map[string]interface{}, id string, md *ModelParams) (interface{}, error) {
+func (s *baseImpl) FindByPrimaryKeysWithCacheOpts(ctx context.Context, primaryKeys map[string]interface{}, m interface{}, md *ModelParams) (interface{}, error) {
 	var (
 		logger = log.WithCtx(ctx)
 		db     = orm.GetDB()
-		m      = config.GetModelRegistry().GetNewModel(md.Table)
 		sql    = db.NewSelect().Model(m)
 	)
 
@@ -103,57 +102,70 @@ func (s *baseImpl) FindByPrimaryKeysWithCacheOpts(ctx context.Context, primaryKe
 	return &m, nil
 }
 
-func (s *baseImpl) scan(ctx context.Context, sql dbInterface, values ...any) []interface{} {
+func (s *baseImpl) Scan(ctx context.Context, sql dbInterface, md *ModelParams, values ...any) (interface{}, error, bool) {
 	var (
 		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
 	)
-	models, _, _ := s.g.Do(sqlKey, func() (interface{}, error) {
+
+	v, err, shared := s.g.Do(sqlKey, func() (interface{}, error) {
 		var (
 			logger = log.WithCtx(ctx)
-			models = make([]interface{}, 0)
+			models = []interface{}{config.GetModelRegistry().GetNewModel(md.Table)}
 		)
 
 		err := sql.Model(&models).Scan(ctx, values...)
 		if err != nil {
-			logger.Error(err.Error(), zap.String("sql", sqlKey))
+			if errors.Is(err, dbsql.ErrNoRows) {
+				return nil, nil
+			}
+
+			logger.Error(err.Error())
+			return nil, err
 		}
 
 		return models, nil
 	})
 
-	return models.([]interface{})
+	if err != nil {
+		return nil, err, shared
+	}
+
+	return v, err, shared
 }
 
-//func (s *baseImpl) scanOne(ctx context.Context, sql dbInterface, values ...any) interface{} {
-//	var (
-//		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
-//		logger = log.WithCtx(ctx)
-//	)
-//
-//	v, err, _ := s.g.Do(sqlKey, func() (interface{}, error) {
-//		var (
-//			m = commontil.InitStructFromGeneric[T]()
-//		)
-//
-//		err := sql.Model(&m).Scan(ctx, values...)
-//		if err != nil {
-//			if !errors.Is(err, dbsql.ErrNoRows) {
-//				logger.Error("Resource not found", zap.String("sql", sql.String()))
-//			}
-//			return nil, err
-//		}
-//
-//		//go rd.HSet(commontil.CopyContext(ctx), m)
-//
-//		return &m, err
-//	})
-//
-//	if err != nil {
-//		return nil
-//	}
-//
-//	return v.(interface{})
-//}
+func (s *baseImpl) ScanOne(ctx context.Context, sql dbInterface, m interface{}, md *ModelParams, values ...any) (interface{}, error, bool) {
+	var (
+		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
+	)
+
+	v, err, shared := s.g.Do(sqlKey, func() (interface{}, error) {
+		var (
+			logger = log.WithCtx(ctx)
+		)
+
+		err := sql.Scan(ctx, values...)
+		if err != nil {
+			if errors.Is(err, dbsql.ErrNoRows) {
+				return nil, nil
+			}
+
+			logger.Error(err.Error())
+			return nil, err
+		}
+
+		if !md.DisableCache {
+			//go rd.HSet(commontil.CopyContext(ctx), m)
+		}
+
+		return &m, err
+	})
+
+	if err != nil {
+		return nil, err, shared
+	}
+
+	return v, err, shared
+}
 
 func (s *baseImpl) insert(ctx context.Context, model interface{}) (r dbsql.Result, err error) {
 	var (

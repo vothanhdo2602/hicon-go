@@ -3,7 +3,9 @@ package config
 import (
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -55,6 +57,7 @@ type DBConfiguration struct {
 type ModelRegistry struct {
 	TableConfigurations map[string]*TableConfiguration
 	Models              map[string][]reflect.StructField
+	Entities            map[string]interface{}
 }
 
 func (s *ModelRegistry) GetModelBuilder(tbl string) []reflect.StructField {
@@ -72,6 +75,7 @@ type RelationColumnConfig struct {
 	Name     string
 	RefTable string
 	Type     string
+	Join     string
 }
 
 type ColumnConfig struct {
@@ -112,4 +116,44 @@ func GetModelRegistry() *ModelRegistry {
 
 func (s *ModelRegistry) GetNewModel(name string) interface{} {
 	return reflect.New(reflect.StructOf(s.Models[name])).Interface()
+}
+
+func ModelWithSelectFields(table string, fields []string) interface{} {
+	var (
+		reflectFields   []reflect.StructField
+		registeredModel = env.DB.DBConfiguration.ModelRegistry.Models[table]
+	)
+
+	for _, field := range fields {
+		for _, rmField := range registeredModel {
+			if strings.ToLower(rmField.Name) == strings.ToLower(field) {
+				reflectFields = append(reflectFields, rmField)
+				break
+			}
+		}
+	}
+
+	return reflect.New(reflect.StructOf(reflectFields)).Interface()
+}
+
+func TransformModel(table string, fields []string, data interface{}) (interface{}, error) {
+	var (
+		newModel = ModelWithSelectFields(table, fields)
+	)
+
+	bytesModel, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(bytesModel, &newModel)
+	if err != nil {
+		return nil, err
+	}
+
+	return newModel, nil
+}
+
+func (s *DBConfiguration) GetDatabaseName() string {
+	return env.DB.DBConfiguration.Database
 }

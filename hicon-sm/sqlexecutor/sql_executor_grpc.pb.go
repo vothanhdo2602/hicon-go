@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	SQLExecutor_UpsertConfiguration_FullMethodName = "/SQLExecutor/UpsertConfiguration"
 	SQLExecutor_FindByPrimaryKeys_FullMethodName   = "/SQLExecutor/FindByPrimaryKeys"
+	SQLExecutor_FindOne_FullMethodName             = "/SQLExecutor/FindOne"
 )
 
 // SQLExecutorClient is the client API for SQLExecutor service.
@@ -29,6 +30,7 @@ const (
 type SQLExecutorClient interface {
 	UpsertConfiguration(ctx context.Context, in *UpsertConfiguration, opts ...grpc.CallOption) (*BaseResponse, error)
 	FindByPrimaryKeys(ctx context.Context, in *FindByPrimaryKeys, opts ...grpc.CallOption) (*BaseResponse, error)
+	FindOne(ctx context.Context, in *FindOne, opts ...grpc.CallOption) (*BaseResponse, error)
 }
 
 type sQLExecutorClient struct {
@@ -59,12 +61,23 @@ func (c *sQLExecutorClient) FindByPrimaryKeys(ctx context.Context, in *FindByPri
 	return out, nil
 }
 
+func (c *sQLExecutorClient) FindOne(ctx context.Context, in *FindOne, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_FindOne_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SQLExecutorServer is the server API for SQLExecutor service.
 // All implementations must embed UnimplementedSQLExecutorServer
 // for forward compatibility.
 type SQLExecutorServer interface {
 	UpsertConfiguration(context.Context, *UpsertConfiguration) (*BaseResponse, error)
 	FindByPrimaryKeys(context.Context, *FindByPrimaryKeys) (*BaseResponse, error)
+	FindOne(context.Context, *FindOne) (*BaseResponse, error)
 	mustEmbedUnimplementedSQLExecutorServer()
 }
 
@@ -80,6 +93,9 @@ func (UnimplementedSQLExecutorServer) UpsertConfiguration(context.Context, *Upse
 }
 func (UnimplementedSQLExecutorServer) FindByPrimaryKeys(context.Context, *FindByPrimaryKeys) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindByPrimaryKeys not implemented")
+}
+func (UnimplementedSQLExecutorServer) FindOne(context.Context, *FindOne) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindOne not implemented")
 }
 func (UnimplementedSQLExecutorServer) mustEmbedUnimplementedSQLExecutorServer() {}
 func (UnimplementedSQLExecutorServer) testEmbeddedByValue()                     {}
@@ -138,6 +154,24 @@ func _SQLExecutor_FindByPrimaryKeys_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SQLExecutor_FindOne_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FindOne)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).FindOne(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_FindOne_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).FindOne(ctx, req.(*FindOne))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SQLExecutor_ServiceDesc is the grpc.ServiceDesc for SQLExecutor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +186,10 @@ var SQLExecutor_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FindByPrimaryKeys",
 			Handler:    _SQLExecutor_FindByPrimaryKeys_Handler,
+		},
+		{
+			MethodName: "FindOne",
+			Handler:    _SQLExecutor_FindOne_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
