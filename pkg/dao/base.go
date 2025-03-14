@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
+	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
 	"github.com/vothanhdo2602/hicon/internal/orm"
+	"github.com/vothanhdo2602/hicon/internal/rd"
 	"go.uber.org/zap"
 	"sync"
 )
@@ -17,7 +19,12 @@ import (
 const (
 	FindByPrimaryKeysAction = "find_by_primary_keys_action"
 	FindAllAction           = "find_all_action"
+	CustomLockKey           = "custom_lock_key_action"
 )
+
+func GetCustomLockKey(lockKey string) string {
+	return fmt.Sprintf("%s:%s", CustomLockKey, lockKey)
+}
 
 type dbInterface interface {
 	String() string
@@ -28,6 +35,9 @@ type dbInterface interface {
 type BaseInterface interface {
 	FindByPrimaryKeys(ctx context.Context, primaryKeys map[string]interface{}, id string, md *ModelParams) (m interface{}, err error, shared bool)
 	ScanOne(ctx context.Context, sql dbInterface, model interface{}, md *ModelParams, values ...any) (m interface{}, err error, shared bool)
+	Scan(ctx context.Context, sql dbInterface, models interface{}, md *ModelParams, values ...any) (interface{}, error, bool)
+	Exec(ctx context.Context, stringSQL, lockKey string, md *ModelParams, args ...any) (interface{}, error, bool)
+	BulkInsert(ctx context.Context, models interface{}, md *ModelParams) (m interface{}, err error)
 	//InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
 	//UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
 }
@@ -35,11 +45,6 @@ type BaseInterface interface {
 type baseImpl struct {
 	g  sftil.Group
 	mu sync.Mutex
-}
-
-type CacheOpts struct {
-	SetCache bool
-	GetCache bool
 }
 
 type ModelParams struct {
@@ -55,16 +60,14 @@ func (s *baseImpl) FindByPrimaryKeys(ctx context.Context, primaryKeys map[string
 	)
 
 	v, err, shared := s.g.Do(key, func() (interface{}, error) {
-		var (
-			m = config.GetModelRegistry().GetNewModel(md.Table)
-		)
-		return s.FindByPrimaryKeysWithCacheOpts(ctx, primaryKeys, m, md)
+		newModel, _ := config.TransformModel(md.Table, nil, primaryKeys)
+		return s.findByPrimaryKeys(ctx, newModel, md)
 	})
 
 	return v, err, shared
 }
 
-func (s *baseImpl) FindByPrimaryKeysWithCacheOpts(ctx context.Context, primaryKeys map[string]interface{}, m interface{}, md *ModelParams) (interface{}, error) {
+func (s *baseImpl) findByPrimaryKeys(ctx context.Context, m interface{}, md *ModelParams) (interface{}, error) {
 	var (
 		logger = log.WithCtx(ctx)
 		db     = orm.GetDB()
@@ -72,21 +75,15 @@ func (s *baseImpl) FindByPrimaryKeysWithCacheOpts(ctx context.Context, primaryKe
 	)
 
 	if !md.DisableCache {
-		//cacheModel := rd.HGet[T](ctx, id)
-		//if cacheModel != nil {
-		//	if opts.SetCache {
-		//		go rd.HSet(bgCtx, *cacheModel)
-		//	}
-		//
-		//	return cacheModel, nil
-		//}
+		cacheModel := rd.HGet(ctx, md.Database, md.Table, m)
+		if cacheModel != nil {
+			go rd.HSet(commontil.CopyContext(ctx), md.Database, md.Table, cacheModel)
+
+			return cacheModel, nil
+		}
 	}
 
-	for k, v := range primaryKeys {
-		sql.Where("? = ?", bun.Ident(k), v)
-	}
-
-	err := sql.Scan(ctx)
+	err := sql.WherePK().Scan(ctx)
 	if err != nil {
 		if errors.Is(err, dbsql.ErrNoRows) {
 			return nil, nil
@@ -102,7 +99,7 @@ func (s *baseImpl) FindByPrimaryKeysWithCacheOpts(ctx context.Context, primaryKe
 	return &m, nil
 }
 
-func (s *baseImpl) Scan(ctx context.Context, sql dbInterface, md *ModelParams, values ...any) (interface{}, error, bool) {
+func (s *baseImpl) Scan(ctx context.Context, sql dbInterface, models interface{}, md *ModelParams, values ...any) (interface{}, error, bool) {
 	var (
 		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
 	)
@@ -110,10 +107,9 @@ func (s *baseImpl) Scan(ctx context.Context, sql dbInterface, md *ModelParams, v
 	v, err, shared := s.g.Do(sqlKey, func() (interface{}, error) {
 		var (
 			logger = log.WithCtx(ctx)
-			models = []interface{}{config.GetModelRegistry().GetNewModel(md.Table)}
 		)
 
-		err := sql.Model(&models).Scan(ctx, values...)
+		err := sql.Scan(ctx, values...)
 		if err != nil {
 			if errors.Is(err, dbsql.ErrNoRows) {
 				return nil, nil
@@ -167,66 +163,66 @@ func (s *baseImpl) ScanOne(ctx context.Context, sql dbInterface, m interface{}, 
 	return v, err, shared
 }
 
-func (s *baseImpl) insert(ctx context.Context, model interface{}) (r dbsql.Result, err error) {
-	var (
-		db        = orm.GetDB()
-		logger    = log.WithCtx(ctx)
-		insertSQL = db.NewInsert().Model(model).Returning("*")
-	)
+func (s *baseImpl) Exec(ctx context.Context, stringSQL, lockKey string, md *ModelParams, args ...any) (interface{}, error, bool) {
+	fn := func() (interface{}, error) {
+		var (
+			logger = log.WithCtx(ctx)
+			db     = orm.GetDB()
+		)
 
-	r, err = insertSQL.Exec(ctx)
-	if err != nil {
-		logger.Error(err.Error(), zap.String("sql", insertSQL.String()))
-		return
+		rows, err := db.QueryContext(ctx, stringSQL, args...)
+		if err != nil {
+			if errors.Is(err, dbsql.ErrNoRows) {
+				return nil, nil
+			}
+
+			logger.Error(err.Error())
+			return nil, err
+		}
+		defer rows.Close()
+
+		return s.scanRows(rows)
 	}
 
-	//go rd.HSet(commontil.CopyContext(ctx), *model)
+	if lockKey == "" {
+		v, err := fn()
+		return v, err, false
+	}
 
-	return r, err
+	var (
+		sqlKey = GetCustomLockKey(lockKey)
+	)
+
+	return s.g.Do(sqlKey, fn)
 }
 
-func (s *baseImpl) insertAll(ctx context.Context, models []interface{}) (m []interface{}, r dbsql.Result, err error) {
-	if len(models) == 0 {
-		return
-	}
-
+func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, md *ModelParams) (m interface{}, err error) {
 	var (
-		db        = orm.GetDB()
-		logger    = log.WithCtx(ctx)
-		insertSQL = db.NewInsert().Model(&models).Returning("*")
+		db     = orm.GetDB()
+		logger = log.WithCtx(ctx)
+		sql    = db.NewInsert().Model(models)
 	)
 
-	r, err = insertSQL.Exec(ctx)
+	if !md.DisableCache {
+		sql.Returning("*")
+	}
+
+	_, err = sql.Exec(ctx)
 	if err != nil {
-		logger.Error(err.Error(), zap.String("sql", insertSQL.String()))
-		return
+		logger.Error(err.Error(), zap.String("sql", sql.String()))
+		return nil, err
 	}
 
 	//go rd.HMSet(commontil.CopyContext(ctx), models)
-
-	return models, r, err
+	return models, nil
 }
 
-//func (s *baseImpl) InsertWithTx(ctx context.Context, tx bun.IDB, m interface{}) error {
+//func (s *baseImpl) UpdateWithById(ctx context.Context, tx bun.IDB, id string, m interface{}) error {
 //	var (
 //		logger = log.WithCtx(ctx)
 //	)
 //
-//	_, err := tx.NewInsert().Model(m).Returning("*").Exec(ctx)
-//	if err != nil {
-//		logger.Error(err.Error(), zap.Any("model", m))
-//		return err
-//	}
-//	//go rd.HSet(commontil.CopyContext(ctx), m)
-//	return err
-//}
-
-//func (s *baseImpl) UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m interface{}) error {
-//	var (
-//		logger = log.WithCtx(ctx)
-//	)
-//
-//	_, err := tx.NewUpdate().Model(m).Where(whereIDTmpl, id).Returning("*").Exec(ctx)
+//	_, err := tx.NewUpdate().Model(m).Where(whereIDTmpl, id).WherePK().Returning("*").Exec(ctx)
 //	if err != nil {
 //		logger.Error(err.Error(), zap.Any("model", m))
 //		return err
@@ -234,3 +230,56 @@ func (s *baseImpl) insertAll(ctx context.Context, models []interface{}) (m []int
 //	//go rd.HSet(commontil.CopyContext(ctx), *m)
 //	return err
 //}
+
+func (s *baseImpl) scanRows(rows *dbsql.Rows) ([]interface{}, error) {
+	var (
+		models []interface{}
+	)
+
+	columns, err := rows.Columns()
+	if err != nil {
+		return models, err
+	}
+
+	values := make([]interface{}, len(columns))
+	// Create a slice of pointers to those interfaces
+	scanArgs := make([]interface{}, len(columns))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	for rows.Next() {
+		var (
+			m = map[string]interface{}{}
+		)
+
+		err = rows.Scan(scanArgs...)
+		if err != nil {
+			panic(err)
+		}
+
+		for i, col := range columns {
+			val := values[i]
+
+			// Handle null values
+			if val == nil {
+				models = append(models, nil)
+				continue
+			}
+
+			// The actual type will depend on your database driver
+			// Common types like string, int64, float64, bool, []byte will be returned
+			switch v := val.(type) {
+			case []byte:
+				// Convert []byte to string for readability
+				m[col] = string(v)
+			default:
+				m[col] = v
+			}
+		}
+
+		models = append(models, m)
+	}
+
+	return models, nil
+}

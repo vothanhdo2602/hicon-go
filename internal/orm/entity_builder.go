@@ -51,7 +51,10 @@ func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField,
 		if col.IsPrimaryKey {
 			tags = append(tags, "pk")
 		}
-		if col.Nullable {
+
+		if col.SoftDelete {
+			tags = append(tags, "soft_delete,nullzero")
+		} else if col.Nullable {
 			tags = append(tags, "nullzero")
 		}
 
@@ -105,7 +108,7 @@ func getGoType(dbType string, nullable bool) interface{} {
 	)
 
 	switch strings.ToLower(dbType) {
-	case "string", "text", "varchar", "char":
+	case "string", "text", "varchar", "char", "time", "timestamp":
 		fieldType = ""
 		if nullable {
 			fieldType = (*string)(nil)
@@ -124,11 +127,6 @@ func getGoType(dbType string, nullable bool) interface{} {
 		fieldType = false
 		if nullable {
 			fieldType = (*bool)(nil)
-		}
-	case "time", "timestamp":
-		fieldType = ""
-		if nullable {
-			fieldType = (*string)(nil)
 		}
 	default:
 		fieldType = interface{}(nil)

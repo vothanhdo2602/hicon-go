@@ -1,11 +1,12 @@
 package grpcapi
 
 import (
-	"fmt"
 	"github.com/goccy/go-json"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -42,56 +43,55 @@ func AnyMapToInterfaceMap(anyMap map[string]*anypb.Any) map[string]interface{} {
 	return result
 }
 
-func ProtoValueToInterface(protoValue *sqlexecutor.Value) interface{} {
-	if protoValue == nil {
-		return nil
+func ConvertInterfaceToAny(v interface{}) (*anypb.Any, error) {
+	anyValue := &anypb.Any{}
+	bytes, _ := json.Marshal(v)
+	bytesValue := &wrappers.BytesValue{
+		Value: bytes,
 	}
-
-	switch k := protoValue.Kind.(type) {
-	case *sqlexecutor.Value_StringValue:
-		return k.StringValue
-	case *sqlexecutor.Value_IntValue:
-		return k.IntValue
-	case *sqlexecutor.Value_FloatValue:
-		return k.FloatValue
-	case *sqlexecutor.Value_BoolValue:
-		return k.BoolValue
-	case *sqlexecutor.Value_BytesValue:
-		return k.BytesValue
-	default:
-		return nil
-	}
+	err := anypb.MarshalFrom(anyValue, bytesValue, proto.MarshalOptions{})
+	return anyValue, err
 }
 
-func InterfaceToProtoValue(val interface{}) (*sqlexecutor.Value, error) {
-	if val == nil {
-		return nil, nil
+func ConvertSliceAnyToPbAnySlice(input []map[string]interface{}) ([]*anypb.Any, error) {
+	result := make([]*anypb.Any, 0, len(input))
+
+	for _, item := range input {
+		d, err := ConvertInterfaceToAny(item)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, d)
 	}
 
-	protoValue := &sqlexecutor.Value{}
+	return result, nil
+}
 
-	switch v := val.(type) {
-	case string:
-		protoValue.Kind = &sqlexecutor.Value_StringValue{StringValue: v}
-	case int:
-		protoValue.Kind = &sqlexecutor.Value_IntValue{IntValue: int64(v)}
-	case int32:
-		protoValue.Kind = &sqlexecutor.Value_IntValue{IntValue: int64(v)}
-	case int64:
-		protoValue.Kind = &sqlexecutor.Value_IntValue{IntValue: v}
-	case float32:
-		protoValue.Kind = &sqlexecutor.Value_FloatValue{FloatValue: float64(v)}
-	case float64:
-		protoValue.Kind = &sqlexecutor.Value_FloatValue{FloatValue: v}
-	case bool:
-		protoValue.Kind = &sqlexecutor.Value_BoolValue{BoolValue: v}
-	case []byte:
-		protoValue.Kind = &sqlexecutor.Value_BytesValue{BytesValue: v}
-	default:
-		return nil, fmt.Errorf("unsupported type: %T", val)
+func ConvertAnyToInterface(anyValue *anypb.Any) (interface{}, error) {
+	var value interface{}
+	bytesValue := &wrappers.BytesValue{}
+	err := anypb.UnmarshalTo(anyValue, bytesValue, proto.UnmarshalOptions{})
+	if err != nil {
+		return value, err
+	}
+	uErr := json.Unmarshal(bytesValue.Value, &value)
+	if uErr != nil {
+		return value, uErr
+	}
+	return value, nil
+}
+
+func SliceConvertAnyToInterface(anyValue []*anypb.Any) ([]interface{}, error) {
+	var values []interface{}
+	for _, v := range anyValue {
+		r, err := ConvertAnyToInterface(v)
+		if err != nil {
+			return values, err
+		}
+		values = append(values, r)
 	}
 
-	return protoValue, nil
+	return values, nil
 }
 
 func ConvertWhereProtoToGo(protoWhere *sqlexecutor.Where) (*requestmodel.Where, error) {
@@ -105,7 +105,7 @@ func ConvertWhereProtoToGo(protoWhere *sqlexecutor.Where) (*requestmodel.Where, 
 	}
 
 	for _, arg := range protoWhere.Args {
-		val := ProtoValueToInterface(arg)
+		val, _ := ConvertAnyToInterface(arg)
 		whereGo.Args = append(whereGo.Args, val)
 	}
 

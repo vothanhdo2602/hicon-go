@@ -57,8 +57,8 @@ services:
     ports:
       - "6379:6379"
     environment:
-      - REDIS_USERNAME=bohemian
-      - REDIS_PASSWORD=bmF0YW4=
+      - REDIS_USERNAME=hicon
+      - REDIS_PASSWORD=hicon_private_pwd
       - REDIS_DB=0
     networks:
       - hicon

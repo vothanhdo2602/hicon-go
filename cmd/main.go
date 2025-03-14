@@ -49,8 +49,9 @@ func main() {
 		time.Sleep(2 * time.Second)
 
 		//for i := 0; i < 100000; i++ {
-		go FindOne(ctx)
-		//go FindByPrimaryKeys(ctx)
+		//go FindAll(ctx)
+		//go BulkInsert(ctx)
+		go FindByPrimaryKeys(ctx)
 		//go FindByPrimaryKeysReqrep(ctx)
 		//}
 	}()
@@ -102,6 +103,12 @@ func UpsertConfiguration(ctx context.Context) {
 					},
 				},
 			},
+			Redis: &sqlexecutor.Redis{
+				Host:     "localhost",
+				Port:     6379,
+				Username: "hicon",
+				Password: "hicon_private_pwd",
+			},
 		}
 	)
 
@@ -120,10 +127,10 @@ func FindByPrimaryKeys(ctx context.Context) {
 	var (
 		req = &sqlexecutor.FindByPrimaryKeys{
 			Table: "users",
-			PrimaryKeys: map[string]*anypb.Any{
+			Data: map[string]*anypb.Any{
 				"id": grpcapi.InterfaceToAnyPb("67c567cd8b606b2293af1519"),
 			},
-			//Select: []string{"id"},
+			Select: []string{"id"},
 		}
 	)
 
@@ -168,11 +175,92 @@ func FindOne(ctx context.Context) {
 	fmt.Println("resp", resp.Data)
 }
 
+func FindAll(ctx context.Context) {
+	var (
+		req = &sqlexecutor.FindAll{
+			Table:        "users",
+			DisableCache: true,
+			Select:       []string{},
+			Where:        []*sqlexecutor.Where{},
+			Relations:    []string{"profile"},
+			Offset:       0,
+			OrderBy:      []string{},
+		}
+	)
+
+	conn, err := grpctil.NewClient()
+	if err != nil {
+		return
+	}
+
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindAll(ctx, req)
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		return
+	}
+
+	fmt.Println("resp", resp.Data)
+}
+
+func Exec(ctx context.Context) {
+	var (
+		req = &sqlexecutor.Exec{
+			Sql: `SELECT "users"."id", "users"."type", "profile"."name" AS "profile__name", "profile"."id" AS "profile__id", "profile"."user_id" AS "profile__user_id", "profile"."email" AS "profile__email" FROM "users" LEFT JOIN "profiles" AS "profile" ON ("profile"."user_id" = "users"."id")`,
+		}
+	)
+
+	conn, err := grpctil.NewClient()
+	if err != nil {
+		return
+	}
+
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).Exec(ctx, req)
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		return
+	}
+
+	//fmt.Println("resp", resp.Data)
+}
+
+func BulkInsert(ctx context.Context) {
+	var (
+		req = &sqlexecutor.BulkInsert{
+			Table:        "users",
+			DisableCache: true,
+			Data:         []*anypb.Any{},
+		}
+	)
+
+	data := []map[string]interface{}{
+		{
+			"id":   "67d299ad4244a581108b7da4",
+			"type": "system",
+		},
+	}
+
+	dataConverted, _ := grpcapi.ConvertSliceAnyToPbAnySlice(data)
+	req.Data = dataConverted
+
+	conn, err := grpctil.NewClient()
+	if err != nil {
+		return
+	}
+
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkInsert(ctx, req)
+	if err != nil {
+		fmt.Println("error: ", err.Error())
+		return
+	}
+
+	fmt.Println("resp", resp.Data)
+}
+
 func FindByPrimaryKeysReqrep(ctx context.Context) {
 	var (
 		req = &requestmodel.FindByPrimaryKeys{
 			Table: "users",
-			PrimaryKeys: map[string]interface{}{
+			Data: map[string]interface{}{
 				"id": "67c567cd8b606b2293af1519",
 			},
 		}

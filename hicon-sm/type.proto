@@ -50,7 +50,7 @@ message RelationColumnConfigs {
   string ref_table = 2;
   string type = 3;
   string join = 4;
-} 
+}
 
 // Table Configuration
 message TableConfiguration {
@@ -59,37 +59,37 @@ message TableConfiguration {
   repeated RelationColumnConfigs relation_column_configs = 3;
 }
 
+message Redis {
+  string host = 1;
+  int32 port = 2;
+  string username = 3;
+  string password = 4;
+  int32 db = 5;
+}
+
 // Main Upsert Configuration
 message UpsertConfiguration {
   DBConfiguration db_configuration = 1;
   repeated TableConfiguration table_configurations = 2;
   bool debug = 3;
   bool disable_cache = 4;
+  Redis redis = 5;
 }
 
 message Where {
   string condition = 1;
-  repeated Value args = 2;
+  repeated google.protobuf.Any args = 2;
 }
 
-message Value {
-  oneof kind {
-    string string_value = 1;
-    int64 int_value = 2;
-    double float_value = 3;
-    bool bool_value = 4;
-    bytes bytes_value = 5;
-  }
-}
-
-message Relation {
-  string name = 1;
+message Join {
+  string join = 1;
+  repeated google.protobuf.Any args = 2;
 }
 
 message FindByPrimaryKeys {
   string table = 1;
   bool disable_cache = 2;
-  map<string, google.protobuf.Any> primary_keys = 3;
+  map<string, google.protobuf.Any> data = 3;
   repeated string select = 4;
 }
 
@@ -99,8 +99,10 @@ message FindOne {
   repeated string select = 3;
   repeated Where where = 4;
   repeated string relations = 5;
-  int64 offset = 6;
-  repeated string order_by = 7;
+  repeated Join joins = 6;
+  int64 offset = 7;
+  int64 limit = 8;
+  repeated string order_by = 9;
 }
 
 message FindAll {
@@ -108,8 +110,43 @@ message FindAll {
   bool disable_cache = 2;
   repeated string select = 3;
   repeated Where where = 4;
-  repeated Relation relations = 5;
-  int64 offset = 6;
-  int64 limit = 7;
-  repeated string order_by = 8;
+  repeated string relations = 5;
+  repeated Join joins = 6;
+  int64 offset = 7;
+  int64 limit = 8;
+  repeated string order_by = 9;
+}
+
+message Exec {
+  string sql = 1;
+  repeated google.protobuf.Any args = 2;
+  string lock_key = 3;
+}
+
+// BulkInsert represents a bulk insert operation
+message BulkInsert {
+  string lock_key = 1;        // Lock key for concurrent insert operations
+  string table = 2;           // Target table name
+  repeated google.protobuf.Any data = 3;  // Data to be inserted
+  bool disable_cache = 4;     // Whether to disable caching
+}
+
+// UpdateByPrimaryKeys represents an update operation using primary keys
+message UpdateByPrimaryKeys {
+  // Lock key for concurrent insert operations
+  // The later task will not execute and get the result from the first task with the same lock key in the same time
+  string lock_key = 1;
+  string table = 2;           // Target table name
+  google.protobuf.Any data = 3;  // Data to be updated
+  bool disable_cache = 4;     // Whether to disable caching
+}
+
+// BulkUpdate represents a bulk update operation
+message BulkUpdate {
+  // Lock key for concurrent insert operations
+  // The later task will not execute and get the result from the first task with the same lock key in the same time
+  string lock_key = 1;
+  string table = 2;           // Target table name
+  repeated google.protobuf.Any data = 3;  // Data to be updated
+  bool disable_cache = 4;     // Whether to disable caching
 }

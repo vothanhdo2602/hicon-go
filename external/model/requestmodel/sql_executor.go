@@ -7,6 +7,7 @@ import (
 
 type UpsertConfiguration struct {
 	DBConfiguration     *DBConfiguration
+	Redis               *Redis
 	TableConfigurations []*TableConfiguration
 	Debug               bool
 	DisableCache        bool
@@ -21,6 +22,14 @@ type DBConfiguration struct {
 	Database string
 	MaxCons  int
 	TLS      *TLS
+}
+
+type Redis struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	DB       int
 }
 
 type TLS struct {
@@ -40,6 +49,7 @@ type ColumnConfig struct {
 	Type         string
 	Nullable     bool
 	IsPrimaryKey bool
+	SoftDelete   bool
 }
 
 type RelationColumnConfigs struct {
@@ -70,14 +80,14 @@ type FindByPrimaryKeys struct {
 	Table        string
 	DisableCache bool
 	Select       []string
-	PrimaryKeys  map[string]interface{}
+	Data         map[string]interface{}
 }
 
 func (m *FindByPrimaryKeys) Validate() error {
 	return validation.ValidateStruct(
 		m,
 		validation.Field(&m.Table, validation.Required),
-		validation.Field(&m.PrimaryKeys, validation.Required),
+		validation.Field(&m.Data, validation.Required),
 	)
 }
 
@@ -87,8 +97,16 @@ type FindOne struct {
 	Select       []string
 	Where        []*Where
 	Relations    []string
+	Join         []*Join
 	Offset       int
 	OrderBy      []string
+}
+
+func (m *FindOne) Validate() error {
+	return validation.ValidateStruct(
+		m,
+		validation.Field(&m.Table, validation.Required),
+	)
 }
 
 type FindAll struct {
@@ -97,9 +115,17 @@ type FindAll struct {
 	Select       []string
 	Where        []*Where
 	Relations    []string
+	Joins        []*Join
 	Limit        int
 	Offset       int
 	OrderBy      []string
+}
+
+func (m *FindAll) Validate() error {
+	return validation.ValidateStruct(
+		m,
+		validation.Field(&m.Table, validation.Required),
+	)
 }
 
 type Where struct {
@@ -107,13 +133,54 @@ type Where struct {
 	Args      []interface{}
 }
 
-type Relation struct {
-	Name string
+type Join struct {
+	Join string
+	Args []interface{}
 }
 
-func (m *FindOne) Validate() error {
+type Exec struct {
+	LockKey string
+	SQL     string
+	Args    []interface{}
+}
+
+type BulkInsert struct {
+	LockKey      string
+	Table        string
+	Data         []interface{}
+	DisableCache bool
+}
+
+func (m *BulkInsert) Validate() error {
 	return validation.ValidateStruct(
 		m,
 		validation.Field(&m.Table, validation.Required),
+		validation.Field(&m.Data, validation.Required),
 	)
+}
+
+type UpdateByPrimaryKeys struct {
+	// Lock key for concurrent insert operations
+	//The later task will not execute and get the result from the first task with the same lock key in the same time
+	LockKey      string
+	Table        string
+	Data         interface{}
+	DisableCache bool
+}
+
+func (m *UpdateByPrimaryKeys) Validate() error {
+	return validation.ValidateStruct(
+		m,
+		validation.Field(&m.Table, validation.Required),
+		validation.Field(&m.Data, validation.Required),
+	)
+}
+
+type BulkUpdate struct {
+	// Lock key for concurrent insert operations
+	//The later task will not execute and get the result from the first task with the same lock key in the same time
+	LockKey      string
+	Table        string
+	Data         []interface{}
+	DisableCache bool
 }

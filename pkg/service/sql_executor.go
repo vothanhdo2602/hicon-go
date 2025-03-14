@@ -3,14 +3,15 @@ package service
 import (
 	"context"
 	"fmt"
-	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
+	"github.com/vothanhdo2602/hicon/external/util/sftil"
 	"github.com/vothanhdo2602/hicon/internal/orm"
-	"github.com/vothanhdo2602/hicon/internal/rd"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"reflect"
 	"strings"
 )
@@ -20,12 +21,16 @@ var (
 )
 
 type SQLExecutorInterface interface {
-	UpdateConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse
+	UpsertConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse
 	FindByPrimaryKeys(ctx context.Context, req *requestmodel.FindByPrimaryKeys) *responsemodel.BaseResponse
 	FindOne(ctx context.Context, req *requestmodel.FindOne) *responsemodel.BaseResponse
+	FindAll(ctx context.Context, req *requestmodel.FindAll) *responsemodel.BaseResponse
+	Exec(ctx context.Context, req *requestmodel.Exec) *responsemodel.BaseResponse
+	BulkInsert(ctx context.Context, req *requestmodel.BulkInsert) *responsemodel.BaseResponse
 }
 
 type sqlExecutorImpl struct {
+	g   sftil.Group
 	dao dao.SQLExecutorInterface
 }
 
@@ -38,68 +43,14 @@ func SQLExecutor() SQLExecutorInterface {
 	return sqlExecutor
 }
 
-func (s *sqlExecutorImpl) UpdateConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse {
+func (s *sqlExecutorImpl) UpsertConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse {
 	if err := req.Validate(); err != nil {
 		return responsemodel.R400(err.Error())
 	}
 
-	dbCfg := &config.DBConfiguration{
-		Type:         req.DBConfiguration.Type,
-		Host:         req.DBConfiguration.Host,
-		Port:         req.DBConfiguration.Port,
-		Username:     req.DBConfiguration.Username,
-		Password:     req.DBConfiguration.Password,
-		Database:     req.DBConfiguration.Database,
-		MaxCons:      req.DBConfiguration.MaxCons,
-		DisableCache: req.DisableCache,
-		Debug:        req.Debug,
-		ModelRegistry: &config.ModelRegistry{
-			TableConfigurations: map[string]*config.TableConfiguration{},
-			Models:              map[string][]reflect.StructField{},
-			Entities:            map[string]interface{}{},
-		},
-	}
-
-	if req.DBConfiguration.TLS != nil {
-		dbCfg.TLS = &config.TLS{
-			RootCAPEM: req.DBConfiguration.TLS.RootCAPEM,
-		}
-	}
-
-	for _, t := range req.TableConfigurations {
-		tblCfg := &config.TableConfiguration{
-			Name:                  t.Name,
-			ColumnConfigs:         map[string]*config.ColumnConfig{},
-			PrimaryColumns:        map[string]interface{}{},
-			RelationColumnConfigs: map[string]*config.RelationColumnConfig{},
-		}
-
-		for _, col := range t.ColumnConfigs {
-			tblCfg.ColumnConfigs[col.Name] = &config.ColumnConfig{
-				Type:         col.Type,
-				Nullable:     col.Nullable,
-				IsPrimaryKey: col.IsPrimaryKey,
-			}
-
-			if col.IsPrimaryKey {
-				tblCfg.PrimaryColumns[col.Name] = col.Name
-			}
-		}
-
-		if len(tblCfg.PrimaryColumns) == 0 {
-			return responsemodel.R400(fmt.Sprintf("Table %s has no primary columns", tblCfg.Name))
-		}
-
-		for _, col := range t.RelationColumnConfigs {
-			tblCfg.RelationColumnConfigs[col.Name] = &config.RelationColumnConfig{
-				Name:     col.Name,
-				RefTable: col.RefTable,
-				Type:     col.Type,
-				Join:     col.Join,
-			}
-		}
-
-		dbCfg.ModelRegistry.TableConfigurations[t.Name] = tblCfg
+	dbCfg, err := config.NewDBConfiguration(req)
+	if err != nil {
+		return responsemodel.R400(err.Error())
 	}
 
 	// build struct
@@ -146,16 +97,16 @@ func (s *sqlExecutorImpl) FindByPrimaryKeys(ctx context.Context, req *requestmod
 		return responsemodel.R400(err.Error())
 	}
 
-	//if err := req.Validate(); err != nil {
-	//	return responsemodel.R400(err.Error())
-	//}
+	if err := req.Validate(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
 
 	if tableRegistry == nil {
 		return responsemodel.R400(fmt.Sprintf("table %s not found in registerd model", req.Table))
 	}
 
 	for k := range tableRegistry.PrimaryColumns {
-		v, ok := req.PrimaryKeys[k]
+		v, ok := req.Data[k]
 		if !ok {
 			return responsemodel.R400(fmt.Sprintf("primary key column %v not found in registered model, please check func update configuration", k))
 		}
@@ -164,7 +115,7 @@ func (s *sqlExecutorImpl) FindByPrimaryKeys(ctx context.Context, req *requestmod
 
 	id := strings.Join(arrKeys, ";")
 
-	data, err, shared := d.FindByPrimaryKeys(ctx, req.PrimaryKeys, id, md)
+	data, err, shared := d.FindByPrimaryKeys(ctx, req.Data, id, md)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}
@@ -194,6 +145,14 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 		sql = orm.GetDB().NewSelect().Model(m)
 	)
 
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	if err := req.Validate(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
 	sql.Offset(req.Offset)
 
 	for _, v := range req.Where {
@@ -201,7 +160,11 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 	}
 
 	for _, v := range req.Relations {
-		sql.Relation(v)
+		sql.Relation(cases.Title(language.English).String(v))
+	}
+
+	for _, v := range req.Join {
+		sql.Join(v.Join, v.Args...)
 	}
 
 	for _, v := range req.OrderBy {
@@ -234,9 +197,17 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 			Table:        req.Table,
 			DisableCache: isDisableCache(req.DisableCache),
 		}
-		m   = config.GetModelRegistry().GetNewModel(md.Table)
+		m   = config.GetModelRegistry().GetNewSliceModel(md.Table)
 		sql = orm.GetDB().NewSelect().Model(m)
 	)
+
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	if err := req.Validate(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
 
 	if req.Limit > 0 {
 		sql.Limit(req.Limit)
@@ -249,49 +220,98 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 	}
 
 	for _, v := range req.Relations {
-		sql.Relation(v)
+		sql.Relation(cases.Title(language.English).String(v))
 	}
 
 	for _, v := range req.OrderBy {
 		sql.Order(v)
 	}
 
-	data, err, shared := d.ScanOne(ctx, sql, m, md)
+	data, err, shared := d.Scan(ctx, sql, m, md)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}
 
 	if len(req.Select) > 0 {
-		newModel, err := config.TransformModel(req.Table, req.Select, data)
+		newModels, err := config.TransformModels(req.Table, req.Select, data)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}
 
-		return responsemodel.R200(newModel, shared)
+		return responsemodel.R200(newModels, shared)
 	}
 
 	return responsemodel.R200(data, shared)
 }
 
-func isDisableCache(localCache bool) bool {
+func (s *sqlExecutorImpl) Exec(ctx context.Context, req *requestmodel.Exec) *responsemodel.BaseResponse {
 	var (
-		env = config.GetENV()
+		d     = dao.SQLExecutor()
+		dbCfg = config.GetENV().DB.DBConfiguration
+		md    = &dao.ModelParams{
+			Database: dbCfg.GetDatabaseName(),
+			//Table:        req.Table,
+			//DisableCache: isDisableCache(req.DisableCache),
+		}
 	)
-	if !env.DB.DBConfiguration.DisableCache || rd.GetRedis() == nil {
-		return env.DB.DBConfiguration.DisableCache
+
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
 	}
 
-	return localCache
+	data, err, shared := d.Exec(ctx, req.SQL, req.LockKey, md, req.Args...)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	return responsemodel.R200(data, shared)
 }
 
-type User struct {
-	bun.BaseModel `bun:"users"`
-	ID            string   `bun:"id,pk" redis:"id" json:"id"`
-	Type          string   `bun:"type,pk" redis:"type" json:"type"`
-	Profile       *Profile `json:"profile,omitempty" bun:"rel:has-one,join:id=user_id"`
-}
+func (s *sqlExecutorImpl) BulkInsert(ctx context.Context, req *requestmodel.BulkInsert) *responsemodel.BaseResponse {
+	var (
+		d     = dao.SQLExecutor()
+		dbCfg = config.GetENV().DB.DBConfiguration
+		md    = &dao.ModelParams{
+			Database:     dbCfg.GetDatabaseName(),
+			Table:        req.Table,
+			DisableCache: isDisableCache(req.DisableCache),
+		}
+	)
 
-type Profile struct {
-	ID   string `bun:"id,pk" redis:"id" json:"id"`
-	Name string `bun:"name,pk" redis:"name" json:"name"`
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	if err := req.Validate(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	models, err := config.TransformModels(req.Table, []string{}, req.Data)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	fn := func() (interface{}, error) {
+		return d.BulkInsert(ctx, models, md)
+	}
+
+	if req.LockKey == "" {
+		r, err := fn()
+		if err != nil {
+			return responsemodel.R400(err.Error())
+		}
+
+		return responsemodel.R200(r, false)
+	}
+
+	var (
+		key = dao.GetCustomLockKey(req.LockKey)
+	)
+
+	r, err, shared := s.g.Do(key, fn)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	return responsemodel.R200(r, shared)
 }

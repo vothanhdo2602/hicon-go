@@ -8,7 +8,6 @@ import (
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/model/entity"
-	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
 	"runtime"
@@ -19,7 +18,7 @@ var (
 	client *redis.Client
 )
 
-func Init(ctx context.Context, wg *sync.WaitGroup) {
+func Init(ctx context.Context, wg *sync.WaitGroup) error {
 	var (
 		logger = log.WithCtx(ctx)
 		rdEnv  = config.GetENV().DB.Redis
@@ -40,30 +39,33 @@ func Init(ctx context.Context, wg *sync.WaitGroup) {
 
 	if err := client.Ping(ctx).Err(); err != nil {
 		logger.Error(err.Error())
+		return err
 	}
 	logger.Info(fmt.Sprintf("⚡️[redis]: connected to %s", addr))
+
+	return nil
 }
 
 func GetRedis() *redis.Client {
 	return client
 }
 
-func HSet[T entity.BaseEntity[T]](ctx context.Context, database, table string, m T) {
+func HSet(ctx context.Context, database, table string, m interface{}) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()
 		key    = entity.GetEntityBucketKey(database, table)
 	)
 
-	pipe.HSet(ctx, key, m.GetID(), m)
-	pipe.HExpire(ctx, key, constant.Expiry10Minutes, m.GetID())
+	pipe.HSet(ctx, key, entity.GetPMKeys(table, m), m)
+	pipe.HExpire(ctx, key, constant.Expiry10Minutes, entity.GetPMKeys(table, m))
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		logger.Error(err.Error())
 	}
 }
 
-func HMSet[T entity.BaseEntity[T]](ctx context.Context, database, table string, data []T) {
+func HMSet(ctx context.Context, database, table string, data []interface{}) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()
@@ -75,8 +77,9 @@ func HMSet[T entity.BaseEntity[T]](ctx context.Context, database, table string, 
 
 	key := entity.GetEntityBucketKey(database, table)
 	for _, m := range data {
-		pipe.HSet(ctx, key, m.GetID(), m)
-		pipe.HExpire(ctx, key, constant.Expiry10Minutes, m.GetID())
+		pmKey := entity.GetPMKeys(table, m)
+		pipe.HSet(ctx, key, pmKey, m)
+		pipe.HExpire(ctx, key, constant.Expiry10Minutes, pmKey)
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
@@ -84,13 +87,13 @@ func HMSet[T entity.BaseEntity[T]](ctx context.Context, database, table string, 
 	}
 }
 
-func HGet[T entity.BaseEntity[T]](ctx context.Context, database, table string, field string) *T {
+func HGet(ctx context.Context, database, table string, m interface{}) interface{} {
 	var (
 		logger = log.WithCtx(ctx)
-		output = commontil.InitStructFromGeneric[T]()
 		key    = entity.GetEntityBucketKey(database, table)
 	)
-	r, err := client.HGet(ctx, key, field).Result()
+
+	r, err := client.HGet(ctx, key, entity.GetPMKeys(table, m)).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			logger.Error(err.Error())
@@ -98,30 +101,31 @@ func HGet[T entity.BaseEntity[T]](ctx context.Context, database, table string, f
 		return nil
 	}
 
-	pjson.Unmarshal(ctx, []byte(r), &output)
-	return &output
+	_ = pjson.Unmarshal(ctx, []byte(r), &m)
+
+	return &m
 }
 
-func HMGet[T entity.BaseEntity[T]](ctx context.Context, database, table string, fields []string) []T {
-	var (
-		logger = log.WithCtx(ctx)
-		key    = entity.GetEntityBucketKey(database, table)
-	)
-	cacheData, err := client.HMGet(ctx, key, fields...).Result()
-	models := make([]T, len(cacheData))
-	if err != nil {
-		if !errors.Is(err, redis.Nil) {
-			logger.Error(err.Error())
-		}
-		return models
-	}
-
-	for i, v := range cacheData {
-		pjson.Unmarshal(ctx, []byte(v.(string)), &models[i])
-	}
-
-	return models
-}
+//func HMGet[T entity.BaseEntity[T]](ctx context.Context, database, table string, fields []string) []T {
+//	var (
+//		logger = log.WithCtx(ctx)
+//		key    = entity.GetEntityBucketKey(database, table)
+//	)
+//	cacheData, err := client.HMGet(ctx, key, fields...).Result()
+//	models := make([]T, len(cacheData))
+//	if err != nil {
+//		if !errors.Is(err, redis.Nil) {
+//			logger.Error(err.Error())
+//		}
+//		return models
+//	}
+//
+//	for i, v := range cacheData {
+//		pjson.Unmarshal(ctx, []byte(v.(string)), &models[i])
+//	}
+//
+//	return models
+//}
 
 func hGetAllWithSQL[T entity.BaseEntity[T]](ctx context.Context, database, table, sql string) (models []T, err error) {
 	var (

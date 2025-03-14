@@ -22,6 +22,11 @@ const (
 	SQLExecutor_UpsertConfiguration_FullMethodName = "/SQLExecutor/UpsertConfiguration"
 	SQLExecutor_FindByPrimaryKeys_FullMethodName   = "/SQLExecutor/FindByPrimaryKeys"
 	SQLExecutor_FindOne_FullMethodName             = "/SQLExecutor/FindOne"
+	SQLExecutor_FindAll_FullMethodName             = "/SQLExecutor/FindAll"
+	SQLExecutor_Exec_FullMethodName                = "/SQLExecutor/Exec"
+	SQLExecutor_BulkInsert_FullMethodName          = "/SQLExecutor/BulkInsert"
+	SQLExecutor_UpdateByPrimaryKeys_FullMethodName = "/SQLExecutor/UpdateByPrimaryKeys"
+	SQLExecutor_BulkUpdate_FullMethodName          = "/SQLExecutor/BulkUpdate"
 )
 
 // SQLExecutorClient is the client API for SQLExecutor service.
@@ -31,6 +36,11 @@ type SQLExecutorClient interface {
 	UpsertConfiguration(ctx context.Context, in *UpsertConfiguration, opts ...grpc.CallOption) (*BaseResponse, error)
 	FindByPrimaryKeys(ctx context.Context, in *FindByPrimaryKeys, opts ...grpc.CallOption) (*BaseResponse, error)
 	FindOne(ctx context.Context, in *FindOne, opts ...grpc.CallOption) (*BaseResponse, error)
+	FindAll(ctx context.Context, in *FindAll, opts ...grpc.CallOption) (*BaseResponse, error)
+	Exec(ctx context.Context, in *Exec, opts ...grpc.CallOption) (*BaseResponse, error)
+	BulkInsert(ctx context.Context, in *BulkInsert, opts ...grpc.CallOption) (*BaseResponse, error)
+	UpdateByPrimaryKeys(ctx context.Context, in *UpdateByPrimaryKeys, opts ...grpc.CallOption) (*BaseResponse, error)
+	BulkUpdate(ctx context.Context, in *BulkUpdate, opts ...grpc.CallOption) (*BaseResponse, error)
 }
 
 type sQLExecutorClient struct {
@@ -71,6 +81,56 @@ func (c *sQLExecutorClient) FindOne(ctx context.Context, in *FindOne, opts ...gr
 	return out, nil
 }
 
+func (c *sQLExecutorClient) FindAll(ctx context.Context, in *FindAll, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_FindAll_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sQLExecutorClient) Exec(ctx context.Context, in *Exec, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_Exec_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sQLExecutorClient) BulkInsert(ctx context.Context, in *BulkInsert, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_BulkInsert_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sQLExecutorClient) UpdateByPrimaryKeys(ctx context.Context, in *UpdateByPrimaryKeys, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_UpdateByPrimaryKeys_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sQLExecutorClient) BulkUpdate(ctx context.Context, in *BulkUpdate, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_BulkUpdate_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SQLExecutorServer is the server API for SQLExecutor service.
 // All implementations must embed UnimplementedSQLExecutorServer
 // for forward compatibility.
@@ -78,6 +138,11 @@ type SQLExecutorServer interface {
 	UpsertConfiguration(context.Context, *UpsertConfiguration) (*BaseResponse, error)
 	FindByPrimaryKeys(context.Context, *FindByPrimaryKeys) (*BaseResponse, error)
 	FindOne(context.Context, *FindOne) (*BaseResponse, error)
+	FindAll(context.Context, *FindAll) (*BaseResponse, error)
+	Exec(context.Context, *Exec) (*BaseResponse, error)
+	BulkInsert(context.Context, *BulkInsert) (*BaseResponse, error)
+	UpdateByPrimaryKeys(context.Context, *UpdateByPrimaryKeys) (*BaseResponse, error)
+	BulkUpdate(context.Context, *BulkUpdate) (*BaseResponse, error)
 	mustEmbedUnimplementedSQLExecutorServer()
 }
 
@@ -96,6 +161,21 @@ func (UnimplementedSQLExecutorServer) FindByPrimaryKeys(context.Context, *FindBy
 }
 func (UnimplementedSQLExecutorServer) FindOne(context.Context, *FindOne) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindOne not implemented")
+}
+func (UnimplementedSQLExecutorServer) FindAll(context.Context, *FindAll) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindAll not implemented")
+}
+func (UnimplementedSQLExecutorServer) Exec(context.Context, *Exec) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Exec not implemented")
+}
+func (UnimplementedSQLExecutorServer) BulkInsert(context.Context, *BulkInsert) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BulkInsert not implemented")
+}
+func (UnimplementedSQLExecutorServer) UpdateByPrimaryKeys(context.Context, *UpdateByPrimaryKeys) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateByPrimaryKeys not implemented")
+}
+func (UnimplementedSQLExecutorServer) BulkUpdate(context.Context, *BulkUpdate) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdate not implemented")
 }
 func (UnimplementedSQLExecutorServer) mustEmbedUnimplementedSQLExecutorServer() {}
 func (UnimplementedSQLExecutorServer) testEmbeddedByValue()                     {}
@@ -172,6 +252,96 @@ func _SQLExecutor_FindOne_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SQLExecutor_FindAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FindAll)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).FindAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_FindAll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).FindAll(ctx, req.(*FindAll))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SQLExecutor_Exec_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Exec)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).Exec(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_Exec_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).Exec(ctx, req.(*Exec))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SQLExecutor_BulkInsert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkInsert)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).BulkInsert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_BulkInsert_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).BulkInsert(ctx, req.(*BulkInsert))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SQLExecutor_UpdateByPrimaryKeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateByPrimaryKeys)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).UpdateByPrimaryKeys(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_UpdateByPrimaryKeys_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).UpdateByPrimaryKeys(ctx, req.(*UpdateByPrimaryKeys))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SQLExecutor_BulkUpdate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkUpdate)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).BulkUpdate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_BulkUpdate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).BulkUpdate(ctx, req.(*BulkUpdate))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SQLExecutor_ServiceDesc is the grpc.ServiceDesc for SQLExecutor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -190,6 +360,26 @@ var SQLExecutor_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FindOne",
 			Handler:    _SQLExecutor_FindOne_Handler,
+		},
+		{
+			MethodName: "FindAll",
+			Handler:    _SQLExecutor_FindAll_Handler,
+		},
+		{
+			MethodName: "Exec",
+			Handler:    _SQLExecutor_Exec_Handler,
+		},
+		{
+			MethodName: "BulkInsert",
+			Handler:    _SQLExecutor_BulkInsert_Handler,
+		},
+		{
+			MethodName: "UpdateByPrimaryKeys",
+			Handler:    _SQLExecutor_UpdateByPrimaryKeys_Handler,
+		},
+		{
+			MethodName: "BulkUpdate",
+			Handler:    _SQLExecutor_BulkUpdate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

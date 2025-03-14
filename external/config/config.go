@@ -12,14 +12,8 @@ import (
 type ENV struct {
 	DB struct {
 		DBConfiguration *DBConfiguration
-		Redis           struct {
-			Host     string
-			Port     int
-			Username string
-			Password string
-			DB       string
-		}
-		Nats struct {
+		Redis           *Redis
+		Nats            struct {
 			URL            string
 			User           string
 			Password       string
@@ -34,54 +28,18 @@ type ENV struct {
 	}
 }
 
+type Redis struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	DB       int
+}
+
 type TLS struct {
 	CertPEM       string
 	PrivateKeyPEM string
 	RootCAPEM     string
-}
-
-type DBConfiguration struct {
-	Type          string
-	Host          string
-	Port          int
-	Username      string
-	Password      string
-	Database      string
-	MaxCons       int
-	TLS           *TLS
-	Debug         bool
-	DisableCache  bool
-	ModelRegistry *ModelRegistry
-}
-
-type ModelRegistry struct {
-	TableConfigurations map[string]*TableConfiguration
-	Models              map[string][]reflect.StructField
-	Entities            map[string]interface{}
-}
-
-func (s *ModelRegistry) GetModelBuilder(tbl string) []reflect.StructField {
-	return s.Models[tbl]
-}
-
-type TableConfiguration struct {
-	Name                  string
-	PrimaryColumns        map[string]interface{}
-	ColumnConfigs         map[string]*ColumnConfig
-	RelationColumnConfigs map[string]*RelationColumnConfig
-}
-
-type RelationColumnConfig struct {
-	Name     string
-	RefTable string
-	Type     string
-	Join     string
-}
-
-type ColumnConfig struct {
-	Type         string
-	Nullable     bool
-	IsPrimaryKey bool
 }
 
 var env ENV
@@ -118,16 +76,24 @@ func (s *ModelRegistry) GetNewModel(name string) interface{} {
 	return reflect.New(reflect.StructOf(s.Models[name])).Interface()
 }
 
+func (s *ModelRegistry) GetNewSliceModel(name string) interface{} {
+	return reflect.New(reflect.SliceOf(reflect.StructOf(s.Models[name]))).Interface()
+}
+
 func ModelWithSelectFields(table string, fields []string) interface{} {
 	var (
 		reflectFields   []reflect.StructField
 		registeredModel = env.DB.DBConfiguration.ModelRegistry.Models[table]
 	)
 
+	if len(fields) == 0 {
+		return reflect.New(reflect.StructOf(registeredModel)).Interface()
+	}
+
 	for _, field := range fields {
-		for _, rmField := range registeredModel {
-			if strings.ToLower(rmField.Name) == strings.ToLower(field) {
-				reflectFields = append(reflectFields, rmField)
+		for _, registeredField := range registeredModel {
+			if strings.ToLower(registeredField.Name) == strings.ToLower(field) {
+				reflectFields = append(reflectFields, registeredField)
 				break
 			}
 		}
@@ -152,6 +118,46 @@ func TransformModel(table string, fields []string, data interface{}) (interface{
 	}
 
 	return newModel, nil
+}
+
+func ModelsWithSelectFields(table string, fields []string) interface{} {
+	var (
+		reflectFields   []reflect.StructField
+		registeredModel = GetModelRegistry().GetModelBuilder(table)
+	)
+
+	if len(fields) == 0 {
+		return reflect.New(reflect.SliceOf(reflect.StructOf(registeredModel))).Interface()
+	}
+
+	for _, field := range fields {
+		for _, registeredField := range registeredModel {
+			if strings.ToLower(registeredField.Name) == strings.ToLower(field) {
+				reflectFields = append(reflectFields, registeredField)
+				break
+			}
+		}
+	}
+
+	return reflect.New(reflect.SliceOf(reflect.StructOf(reflectFields))).Interface()
+}
+
+func TransformModels(table string, fields []string, data interface{}) (interface{}, error) {
+	var (
+		newModels = ModelsWithSelectFields(table, fields)
+	)
+
+	bytesModel, err := json.Marshal(data)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(bytesModel, &newModels)
+	if err != nil {
+		return nil, err
+	}
+
+	return newModels, nil
 }
 
 func (s *DBConfiguration) GetDatabaseName() string {
