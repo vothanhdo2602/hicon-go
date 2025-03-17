@@ -622,7 +622,7 @@ func (x *UpsertConfiguration) GetRedis() *Redis {
 
 type Where struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Condition     string                 `protobuf:"bytes,1,opt,name=condition,proto3" json:"condition,omitempty"`
+	Query         string                 `protobuf:"bytes,1,opt,name=Query,proto3" json:"Query,omitempty"`
 	Args          []*anypb.Any           `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -658,9 +658,9 @@ func (*Where) Descriptor() ([]byte, []int) {
 	return file_hicon_sm_type_proto_rawDescGZIP(), []int{8}
 }
 
-func (x *Where) GetCondition() string {
+func (x *Where) GetQuery() string {
 	if x != nil {
-		return x.Condition
+		return x.Query
 	}
 	return ""
 }
@@ -1208,8 +1208,8 @@ func (x *UpdateByPrimaryKeys) GetDisableCache() bool {
 	return false
 }
 
-// BulkUpdate represents a bulk update operation
-type BulkUpdate struct {
+// BulkUpdateByPrimaryKeys represents a bulk update operation
+type BulkUpdateByPrimaryKeys struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Lock key for concurrent insert operations
 	// The later task will not execute and get the result from the first task with the same lock key in the same time
@@ -1221,20 +1221,20 @@ type BulkUpdate struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *BulkUpdate) Reset() {
-	*x = BulkUpdate{}
+func (x *BulkUpdateByPrimaryKeys) Reset() {
+	*x = BulkUpdateByPrimaryKeys{}
 	mi := &file_hicon_sm_type_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *BulkUpdate) String() string {
+func (x *BulkUpdateByPrimaryKeys) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*BulkUpdate) ProtoMessage() {}
+func (*BulkUpdateByPrimaryKeys) ProtoMessage() {}
 
-func (x *BulkUpdate) ProtoReflect() protoreflect.Message {
+func (x *BulkUpdateByPrimaryKeys) ProtoReflect() protoreflect.Message {
 	mi := &file_hicon_sm_type_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -1246,33 +1246,33 @@ func (x *BulkUpdate) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use BulkUpdate.ProtoReflect.Descriptor instead.
-func (*BulkUpdate) Descriptor() ([]byte, []int) {
+// Deprecated: Use BulkUpdateByPrimaryKeys.ProtoReflect.Descriptor instead.
+func (*BulkUpdateByPrimaryKeys) Descriptor() ([]byte, []int) {
 	return file_hicon_sm_type_proto_rawDescGZIP(), []int{16}
 }
 
-func (x *BulkUpdate) GetLockKey() string {
+func (x *BulkUpdateByPrimaryKeys) GetLockKey() string {
 	if x != nil {
 		return x.LockKey
 	}
 	return ""
 }
 
-func (x *BulkUpdate) GetTable() string {
+func (x *BulkUpdateByPrimaryKeys) GetTable() string {
 	if x != nil {
 		return x.Table
 	}
 	return ""
 }
 
-func (x *BulkUpdate) GetData() []*anypb.Any {
+func (x *BulkUpdateByPrimaryKeys) GetData() []*anypb.Any {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-func (x *BulkUpdate) GetDisableCache() bool {
+func (x *BulkUpdateByPrimaryKeys) GetDisableCache() bool {
 	if x != nil {
 		return x.DisableCache
 	}
@@ -1483,25 +1483,25 @@ func file_hicon_sm_type_proto_rawDescGZIP() []byte {
 
 var file_hicon_sm_type_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_hicon_sm_type_proto_goTypes = []any{
-	(*BaseResponse)(nil),          // 0: hicon.type.BaseResponse
-	(*TLS)(nil),                   // 1: hicon.type.TLS
-	(*DBConfiguration)(nil),       // 2: hicon.type.DBConfiguration
-	(*ColumnConfig)(nil),          // 3: hicon.type.ColumnConfig
-	(*RelationColumnConfigs)(nil), // 4: hicon.type.RelationColumnConfigs
-	(*TableConfiguration)(nil),    // 5: hicon.type.TableConfiguration
-	(*Redis)(nil),                 // 6: hicon.type.Redis
-	(*UpsertConfiguration)(nil),   // 7: hicon.type.UpsertConfiguration
-	(*Where)(nil),                 // 8: hicon.type.Where
-	(*Join)(nil),                  // 9: hicon.type.Join
-	(*FindByPrimaryKeys)(nil),     // 10: hicon.type.FindByPrimaryKeys
-	(*FindOne)(nil),               // 11: hicon.type.FindOne
-	(*FindAll)(nil),               // 12: hicon.type.FindAll
-	(*Exec)(nil),                  // 13: hicon.type.Exec
-	(*BulkInsert)(nil),            // 14: hicon.type.BulkInsert
-	(*UpdateByPrimaryKeys)(nil),   // 15: hicon.type.UpdateByPrimaryKeys
-	(*BulkUpdate)(nil),            // 16: hicon.type.BulkUpdate
-	nil,                           // 17: hicon.type.FindByPrimaryKeys.DataEntry
-	(*anypb.Any)(nil),             // 18: google.protobuf.Any
+	(*BaseResponse)(nil),            // 0: hicon.type.BaseResponse
+	(*TLS)(nil),                     // 1: hicon.type.TLS
+	(*DBConfiguration)(nil),         // 2: hicon.type.DBConfiguration
+	(*ColumnConfig)(nil),            // 3: hicon.type.ColumnConfig
+	(*RelationColumnConfigs)(nil),   // 4: hicon.type.RelationColumnConfigs
+	(*TableConfiguration)(nil),      // 5: hicon.type.TableConfiguration
+	(*Redis)(nil),                   // 6: hicon.type.Redis
+	(*UpsertConfiguration)(nil),     // 7: hicon.type.UpsertConfiguration
+	(*Where)(nil),                   // 8: hicon.type.Where
+	(*Join)(nil),                    // 9: hicon.type.Join
+	(*FindByPrimaryKeys)(nil),       // 10: hicon.type.FindByPrimaryKeys
+	(*FindOne)(nil),                 // 11: hicon.type.FindOne
+	(*FindAll)(nil),                 // 12: hicon.type.FindAll
+	(*Exec)(nil),                    // 13: hicon.type.Exec
+	(*BulkInsert)(nil),              // 14: hicon.type.BulkInsert
+	(*UpdateByPrimaryKeys)(nil),     // 15: hicon.type.UpdateByPrimaryKeys
+	(*BulkUpdateByPrimaryKeys)(nil), // 16: hicon.type.BulkUpdateByPrimaryKeys
+	nil,                             // 17: hicon.type.FindByPrimaryKeys.DataEntry
+	(*anypb.Any)(nil),               // 18: google.protobuf.Any
 }
 var file_hicon_sm_type_proto_depIdxs = []int32{
 	18, // 0: hicon.type.BaseResponse.data:type_name -> google.protobuf.Any
@@ -1521,7 +1521,7 @@ var file_hicon_sm_type_proto_depIdxs = []int32{
 	18, // 14: hicon.type.Exec.args:type_name -> google.protobuf.Any
 	18, // 15: hicon.type.BulkInsert.data:type_name -> google.protobuf.Any
 	18, // 16: hicon.type.UpdateByPrimaryKeys.data:type_name -> google.protobuf.Any
-	18, // 17: hicon.type.BulkUpdate.data:type_name -> google.protobuf.Any
+	18, // 17: hicon.type.BulkUpdateByPrimaryKeys.data:type_name -> google.protobuf.Any
 	18, // 18: hicon.type.FindByPrimaryKeys.DataEntry.value:type_name -> google.protobuf.Any
 	19, // [19:19] is the sub-list for method output_type
 	19, // [19:19] is the sub-list for method input_type

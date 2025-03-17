@@ -100,8 +100,8 @@ func ConvertWhereProtoToGo(protoWhere *sqlexecutor.Where) (*requestmodel.Where, 
 	}
 
 	whereGo := &requestmodel.Where{
-		Condition: protoWhere.Condition,
-		Args:      make([]interface{}, 0, len(protoWhere.Args)),
+		Query: protoWhere.Query,
+		Args:  make([]interface{}, 0, len(protoWhere.Args)),
 	}
 
 	for _, arg := range protoWhere.Args {

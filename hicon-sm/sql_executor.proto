@@ -12,5 +12,5 @@ service SQLExecutor {
   rpc Exec(hicon.type.Exec) returns (hicon.type.BaseResponse) {}
   rpc BulkInsert(hicon.type.BulkInsert) returns (hicon.type.BaseResponse) {}
   rpc UpdateByPrimaryKeys(hicon.type.UpdateByPrimaryKeys) returns (hicon.type.BaseResponse) {}
-  rpc BulkUpdate(hicon.type.BulkUpdate) returns (hicon.type.BaseResponse) {}
+  rpc BulkUpdateByPrimaryKeys(hicon.type.BulkUpdateByPrimaryKeys) returns (hicon.type.BaseResponse) {}
 }

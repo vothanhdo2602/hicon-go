@@ -27,6 +27,7 @@ type SQLExecutorInterface interface {
 	FindAll(ctx context.Context, req *requestmodel.FindAll) *responsemodel.BaseResponse
 	Exec(ctx context.Context, req *requestmodel.Exec) *responsemodel.BaseResponse
 	BulkInsert(ctx context.Context, req *requestmodel.BulkInsert) *responsemodel.BaseResponse
+	UpdateByPrimaryKeys(ctx context.Context, req *requestmodel.UpdateByPrimaryKeys) *responsemodel.BaseResponse
 }
 
 type sqlExecutorImpl struct {
@@ -54,21 +55,27 @@ func (s *sqlExecutorImpl) UpsertConfiguration(ctx context.Context, req *requestm
 	}
 
 	// build struct
-	builderEntities := map[string][]reflect.StructField{}
+	var (
+		models    = map[string][]reflect.StructField{}
+		ptrModels = map[string][]reflect.StructField{}
+	)
+
 	for _, v := range dbCfg.ModelRegistry.TableConfigurations {
-		instance, err := orm.BuildEntity(v)
+		instance, ptrInstance, err := orm.BuildEntity(v)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}
-		builderEntities[v.Name] = instance
+		models[v.Name] = instance
+		ptrModels[v.Name] = ptrInstance
 	}
 
 	for _, v := range dbCfg.ModelRegistry.TableConfigurations {
-		if err := orm.MapRelationToEntity(v, builderEntities); err != nil {
+		if err := orm.MapRelationToEntity(v, models); err != nil {
 			return responsemodel.R400(err.Error())
 		}
 
-		dbCfg.ModelRegistry.Models[v.Name] = builderEntities[v.Name]
+		dbCfg.ModelRegistry.Models[v.Name] = models[v.Name]
+		dbCfg.ModelRegistry.PtrModels[v.Name] = ptrModels[v.Name]
 	}
 
 	if err := orm.Init(ctx, nil, dbCfg); err != nil {
@@ -121,7 +128,7 @@ func (s *sqlExecutorImpl) FindByPrimaryKeys(ctx context.Context, req *requestmod
 	}
 
 	if len(req.Select) > 0 {
-		newModel, err := config.TransformModel(req.Table, req.Select, data)
+		newModel, err := config.TransformModel(req.Table, req.Select, data, false)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}
@@ -156,7 +163,7 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 	sql.Offset(req.Offset)
 
 	for _, v := range req.Where {
-		sql.Where(v.Condition, v.Args...)
+		sql.Where(v.Query, v.Args...)
 	}
 
 	for _, v := range req.Relations {
@@ -177,7 +184,7 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 	}
 
 	if len(req.Select) > 0 {
-		newModel, err := config.TransformModel(req.Table, req.Select, data)
+		newModel, err := config.TransformModel(req.Table, req.Select, data, false)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}
@@ -216,7 +223,7 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 	sql.Offset(req.Offset)
 
 	for _, v := range req.Where {
-		sql.Where(v.Condition, v.Args...)
+		sql.Where(v.Query, v.Args...)
 	}
 
 	for _, v := range req.Relations {
@@ -233,7 +240,7 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 	}
 
 	if len(req.Select) > 0 {
-		newModels, err := config.TransformModels(req.Table, req.Select, data)
+		newModels, err := config.TransformModels(req.Table, req.Select, data, false)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}
@@ -278,21 +285,70 @@ func (s *sqlExecutorImpl) BulkInsert(ctx context.Context, req *requestmodel.Bulk
 		}
 	)
 
-	if err := config.ConfigurationUpdated(); err != nil {
-		return responsemodel.R400(err.Error())
+	fn := func() (interface{}, error) {
+		if err := config.ConfigurationUpdated(); err != nil {
+			return nil, err
+		}
+
+		if err := req.Validate(); err != nil {
+			return nil, err
+		}
+
+		models, err := config.TransformModels(req.Table, nil, req.Data, false)
+		if err != nil {
+			return nil, err
+		}
+
+		return d.BulkInsert(ctx, models, md)
 	}
 
-	if err := req.Validate(); err != nil {
-		return responsemodel.R400(err.Error())
+	if req.LockKey == "" {
+		r, err := fn()
+		if err != nil {
+			return responsemodel.R400(err.Error())
+		}
+
+		return responsemodel.R200(r, false)
 	}
 
-	models, err := config.TransformModels(req.Table, []string{}, req.Data)
+	var (
+		key = dao.GetCustomLockKey(req.LockKey)
+	)
+
+	r, err, shared := s.g.Do(key, fn)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}
 
+	return responsemodel.R200(r, shared)
+}
+
+func (s *sqlExecutorImpl) UpdateByPrimaryKeys(ctx context.Context, req *requestmodel.UpdateByPrimaryKeys) *responsemodel.BaseResponse {
+	var (
+		d     = dao.SQLExecutor()
+		dbCfg = config.GetENV().DB.DBConfiguration
+		md    = &dao.ModelParams{
+			Database:     dbCfg.GetDatabaseName(),
+			Table:        req.Table,
+			DisableCache: isDisableCache(req.DisableCache),
+		}
+	)
+
 	fn := func() (interface{}, error) {
-		return d.BulkInsert(ctx, models, md)
+		if err := config.ConfigurationUpdated(); err != nil {
+			return nil, err
+		}
+
+		if err := req.Validate(); err != nil {
+			return nil, err
+		}
+
+		m, err := config.TransformModel(req.Table, nil, req.Data, true)
+		if err != nil {
+			return nil, err
+		}
+
+		return d.UpdateByPrimaryKeys(ctx, m, md)
 	}
 
 	if req.LockKey == "" {

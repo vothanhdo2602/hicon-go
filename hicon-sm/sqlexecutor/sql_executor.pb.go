@@ -67,15 +67,15 @@ var file_hicon_sm_sql_executor_proto_rawDesc = string([]byte{
 })
 
 var file_hicon_sm_sql_executor_proto_goTypes = []any{
-	(*UpsertConfiguration)(nil), // 0: hicon.type.UpsertConfiguration
-	(*FindByPrimaryKeys)(nil),   // 1: hicon.type.FindByPrimaryKeys
-	(*FindOne)(nil),             // 2: hicon.type.FindOne
-	(*FindAll)(nil),             // 3: hicon.type.FindAll
-	(*Exec)(nil),                // 4: hicon.type.Exec
-	(*BulkInsert)(nil),          // 5: hicon.type.BulkInsert
-	(*UpdateByPrimaryKeys)(nil), // 6: hicon.type.UpdateByPrimaryKeys
-	(*BulkUpdate)(nil),          // 7: hicon.type.BulkUpdate
-	(*BaseResponse)(nil),        // 8: hicon.type.BaseResponse
+	(*UpsertConfiguration)(nil),     // 0: hicon.type.UpsertConfiguration
+	(*FindByPrimaryKeys)(nil),       // 1: hicon.type.FindByPrimaryKeys
+	(*FindOne)(nil),                 // 2: hicon.type.FindOne
+	(*FindAll)(nil),                 // 3: hicon.type.FindAll
+	(*Exec)(nil),                    // 4: hicon.type.Exec
+	(*BulkInsert)(nil),              // 5: hicon.type.BulkInsert
+	(*UpdateByPrimaryKeys)(nil),     // 6: hicon.type.UpdateByPrimaryKeys
+	(*BulkUpdateByPrimaryKeys)(nil), // 7: hicon.type.BulkUpdateByPrimaryKeys
+	(*BaseResponse)(nil),            // 8: hicon.type.BaseResponse
 }
 var file_hicon_sm_sql_executor_proto_depIdxs = []int32{
 	0, // 0: SQLExecutor.UpsertConfiguration:input_type -> hicon.type.UpsertConfiguration
@@ -85,7 +85,7 @@ var file_hicon_sm_sql_executor_proto_depIdxs = []int32{
 	4, // 4: SQLExecutor.Exec:input_type -> hicon.type.Exec
 	5, // 5: SQLExecutor.BulkInsert:input_type -> hicon.type.BulkInsert
 	6, // 6: SQLExecutor.UpdateByPrimaryKeys:input_type -> hicon.type.UpdateByPrimaryKeys
-	7, // 7: SQLExecutor.BulkUpdate:input_type -> hicon.type.BulkUpdate
+	7, // 7: SQLExecutor.BulkUpdateByPrimaryKeys:input_type -> hicon.type.BulkUpdateByPrimaryKeys
 	8, // 8: SQLExecutor.UpsertConfiguration:output_type -> hicon.type.BaseResponse
 	8, // 9: SQLExecutor.FindByPrimaryKeys:output_type -> hicon.type.BaseResponse
 	8, // 10: SQLExecutor.FindOne:output_type -> hicon.type.BaseResponse
@@ -93,7 +93,7 @@ var file_hicon_sm_sql_executor_proto_depIdxs = []int32{
 	8, // 12: SQLExecutor.Exec:output_type -> hicon.type.BaseResponse
 	8, // 13: SQLExecutor.BulkInsert:output_type -> hicon.type.BaseResponse
 	8, // 14: SQLExecutor.UpdateByPrimaryKeys:output_type -> hicon.type.BaseResponse
-	8, // 15: SQLExecutor.BulkUpdate:output_type -> hicon.type.BaseResponse
+	8, // 15: SQLExecutor.BulkUpdateByPrimaryKeys:output_type -> hicon.type.BaseResponse
 	8, // [8:16] is the sub-list for method output_type
 	0, // [0:8] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name

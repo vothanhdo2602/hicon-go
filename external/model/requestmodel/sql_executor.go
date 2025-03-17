@@ -129,8 +129,8 @@ func (m *FindAll) Validate() error {
 }
 
 type Where struct {
-	Condition string
-	Args      []interface{}
+	Query string
+	Args  []interface{}
 }
 
 type Join struct {
@@ -176,7 +176,7 @@ func (m *UpdateByPrimaryKeys) Validate() error {
 	)
 }
 
-type BulkUpdate struct {
+type BulkUpdateByPrimaryKeys struct {
 	// Lock key for concurrent insert operations
 	//The later task will not execute and get the result from the first task with the same lock key in the same time
 	LockKey      string

@@ -64,10 +64,6 @@ func GetJs() jetstream.JetStream {
 }
 
 func RegisterReqrep(ctx context.Context) (err error) {
-	if err = ReqrepQueueSubscribe(ctx, GetUpsertConfigurationSubject(), handler.UpsertConfiguration); err != nil {
-		return
-	}
-
 	if err = ReqrepQueueSubscribe(ctx, GetFindByPrimaryKeysSubject(), handler.FindByPrimaryKeys); err != nil {
 		return
 	}

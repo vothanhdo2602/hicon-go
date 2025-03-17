@@ -24,9 +24,13 @@ type DBConfiguration struct {
 type ModelRegistry struct {
 	TableConfigurations map[string]*TableConfiguration
 	Models              map[string][]reflect.StructField
+	PtrModels           map[string][]reflect.StructField
 }
 
-func (s *ModelRegistry) GetModelBuilder(tbl string) []reflect.StructField {
+func (s *ModelRegistry) GetModelBuilder(tbl string, ptrModel bool) []reflect.StructField {
+	if ptrModel {
+		return s.PtrModels[tbl]
+	}
 	return s.Models[tbl]
 }
 
@@ -65,6 +69,7 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 		ModelRegistry: &ModelRegistry{
 			TableConfigurations: map[string]*TableConfiguration{},
 			Models:              map[string][]reflect.StructField{},
+			PtrModels:           map[string][]reflect.StructField{},
 		},
 	}
 

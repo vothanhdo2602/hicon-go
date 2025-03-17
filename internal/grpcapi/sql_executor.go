@@ -232,11 +232,28 @@ func (SQLExecutor) BulkInsert(ctx context.Context, data *sqlexecutor.BulkInsert)
 func (SQLExecutor) UpdateByPrimaryKeys(ctx context.Context, data *sqlexecutor.UpdateByPrimaryKeys) (*sqlexecutor.BaseResponse, error) {
 	defer commontil.Recover(ctx)
 
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateByPrimaryKeys not implemented")
+	var (
+		req = &requestmodel.UpdateByPrimaryKeys{
+			LockKey:      data.LockKey,
+			Table:        data.Table,
+			DisableCache: data.DisableCache,
+		}
+		svc = service.SQLExecutor()
+	)
+
+	r, err := ConvertAnyToInterface(data.Data)
+	if err != nil {
+		return nil, err
+	}
+	req.Data = r
+
+	resp := svc.UpdateByPrimaryKeys(ctx, req)
+
+	return NewResponse(resp), nil
 }
 
-func (SQLExecutor) BulkUpdate(ctx context.Context, data *sqlexecutor.BulkUpdate) (*sqlexecutor.BaseResponse, error) {
+func (SQLExecutor) BulkUpdateByPrimaryKeys(ctx context.Context, data *sqlexecutor.BulkUpdateByPrimaryKeys) (*sqlexecutor.BaseResponse, error) {
 	defer commontil.Recover(ctx)
 
-	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdate not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdateByPrimaryKeys not implemented")
 }

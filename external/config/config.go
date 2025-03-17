@@ -80,11 +80,15 @@ func (s *ModelRegistry) GetNewSliceModel(name string) interface{} {
 	return reflect.New(reflect.SliceOf(reflect.StructOf(s.Models[name]))).Interface()
 }
 
-func ModelWithSelectFields(table string, fields []string) interface{} {
+func ModelWithSelectFields(table string, fields []string, ptrModel bool) interface{} {
 	var (
 		reflectFields   []reflect.StructField
 		registeredModel = env.DB.DBConfiguration.ModelRegistry.Models[table]
 	)
+
+	if ptrModel {
+		registeredModel = env.DB.DBConfiguration.ModelRegistry.PtrModels[table]
+	}
 
 	if len(fields) == 0 {
 		return reflect.New(reflect.StructOf(registeredModel)).Interface()
@@ -102,9 +106,9 @@ func ModelWithSelectFields(table string, fields []string) interface{} {
 	return reflect.New(reflect.StructOf(reflectFields)).Interface()
 }
 
-func TransformModel(table string, fields []string, data interface{}) (interface{}, error) {
+func TransformModel(table string, fields []string, data interface{}, ptrModel bool) (interface{}, error) {
 	var (
-		newModel = ModelWithSelectFields(table, fields)
+		newModel = ModelWithSelectFields(table, fields, ptrModel)
 	)
 
 	bytesModel, err := json.Marshal(data)
@@ -120,10 +124,10 @@ func TransformModel(table string, fields []string, data interface{}) (interface{
 	return newModel, nil
 }
 
-func ModelsWithSelectFields(table string, fields []string) interface{} {
+func ModelsWithSelectFields(table string, fields []string, ptrModel bool) interface{} {
 	var (
 		reflectFields   []reflect.StructField
-		registeredModel = GetModelRegistry().GetModelBuilder(table)
+		registeredModel = GetModelRegistry().GetModelBuilder(table, ptrModel)
 	)
 
 	if len(fields) == 0 {
@@ -142,9 +146,9 @@ func ModelsWithSelectFields(table string, fields []string) interface{} {
 	return reflect.New(reflect.SliceOf(reflect.StructOf(reflectFields))).Interface()
 }
 
-func TransformModels(table string, fields []string, data interface{}) (interface{}, error) {
+func TransformModels(table string, fields []string, data interface{}, ptrModel bool) (interface{}, error) {
 	var (
-		newModels = ModelsWithSelectFields(table, fields)
+		newModels = ModelsWithSelectFields(table, fields, ptrModel)
 	)
 
 	bytesModel, err := json.Marshal(data)

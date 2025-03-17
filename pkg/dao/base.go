@@ -38,6 +38,7 @@ type BaseInterface interface {
 	Scan(ctx context.Context, sql dbInterface, models interface{}, md *ModelParams, values ...any) (interface{}, error, bool)
 	Exec(ctx context.Context, stringSQL, lockKey string, md *ModelParams, args ...any) (interface{}, error, bool)
 	BulkInsert(ctx context.Context, models interface{}, md *ModelParams) (m interface{}, err error)
+	UpdateByPrimaryKeys(ctx context.Context, m interface{}, md *ModelParams) (r interface{}, err error)
 	//InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
 	//UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
 }
@@ -60,7 +61,7 @@ func (s *baseImpl) FindByPrimaryKeys(ctx context.Context, primaryKeys map[string
 	)
 
 	v, err, shared := s.g.Do(key, func() (interface{}, error) {
-		newModel, _ := config.TransformModel(md.Table, nil, primaryKeys)
+		newModel, _ := config.TransformModel(md.Table, nil, primaryKeys, false)
 		return s.findByPrimaryKeys(ctx, newModel, md)
 	})
 
@@ -205,6 +206,8 @@ func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, md *Model
 
 	if !md.DisableCache {
 		sql.Returning("*")
+	} else {
+		sql.Returning("NULL")
 	}
 
 	_, err = sql.Exec(ctx)
@@ -217,19 +220,28 @@ func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, md *Model
 	return models, nil
 }
 
-//func (s *baseImpl) UpdateWithById(ctx context.Context, tx bun.IDB, id string, m interface{}) error {
-//	var (
-//		logger = log.WithCtx(ctx)
-//	)
-//
-//	_, err := tx.NewUpdate().Model(m).Where(whereIDTmpl, id).WherePK().Returning("*").Exec(ctx)
-//	if err != nil {
-//		logger.Error(err.Error(), zap.Any("model", m))
-//		return err
-//	}
-//	//go rd.HSet(commontil.CopyContext(ctx), *m)
-//	return err
-//}
+func (s *baseImpl) UpdateByPrimaryKeys(ctx context.Context, m interface{}, md *ModelParams) (r interface{}, err error) {
+	var (
+		db     = orm.GetDB()
+		logger = log.WithCtx(ctx)
+		sql    = db.NewUpdate().Model(m).WherePK().OmitZero()
+	)
+
+	if !md.DisableCache {
+		sql.Returning("*")
+	} else {
+		sql.Returning("NULL")
+	}
+
+	_, err = sql.Exec(ctx)
+	if err != nil {
+		logger.Error(err.Error(), zap.String("sql", sql.String()))
+		return nil, err
+	}
+
+	//go rd.HSet(commontil.CopyContext(ctx), *m)
+	return m, err
+}
 
 func (s *baseImpl) scanRows(rows *dbsql.Rows) ([]interface{}, error) {
 	var (

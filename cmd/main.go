@@ -51,7 +51,9 @@ func main() {
 		//for i := 0; i < 100000; i++ {
 		//go FindAll(ctx)
 		//go BulkInsert(ctx)
-		go FindByPrimaryKeys(ctx)
+		//go FindByPrimaryKeys(ctx)
+		go UpdateByPrimaryKeys(ctx)
+
 		//go FindByPrimaryKeysReqrep(ctx)
 		//}
 	}()
@@ -88,6 +90,7 @@ func UpsertConfiguration(ctx context.Context) {
 					ColumnConfigs: []*sqlexecutor.ColumnConfig{
 						{Name: "id", Type: "text", IsPrimaryKey: true},
 						{Name: "type", Type: "string"},
+						{Name: "created_at", Type: "time"},
 					},
 					RelationColumnConfigs: []*sqlexecutor.RelationColumnConfigs{
 						{Name: "profile", Type: orm.HasOne, RefTable: "profiles", Join: "id=user_id"},
@@ -141,7 +144,7 @@ func FindByPrimaryKeys(ctx context.Context) {
 
 	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindByPrimaryKeys(ctx, req)
 	if err != nil {
-		fmt.Println("error: ", err.Error())
+		fmt.Println(err.Error())
 		return
 	}
 
@@ -168,7 +171,7 @@ func FindOne(ctx context.Context) {
 
 	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindOne(ctx, req)
 	if err != nil {
-		fmt.Println("error: ", err.Error())
+		fmt.Println(err.Error())
 		return
 	}
 
@@ -195,7 +198,7 @@ func FindAll(ctx context.Context) {
 
 	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindAll(ctx, req)
 	if err != nil {
-		fmt.Println("error: ", err.Error())
+		fmt.Println(err.Error())
 		return
 	}
 
@@ -216,7 +219,7 @@ func Exec(ctx context.Context) {
 
 	_, err = sqlexecutor.NewSQLExecutorClient(conn).Exec(ctx, req)
 	if err != nil {
-		fmt.Println("error: ", err.Error())
+		fmt.Println(err.Error())
 		return
 	}
 
@@ -249,7 +252,38 @@ func BulkInsert(ctx context.Context) {
 
 	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkInsert(ctx, req)
 	if err != nil {
-		fmt.Println("error: ", err.Error())
+		fmt.Println(err.Error())
+		return
+	}
+
+	fmt.Println("resp", resp.Data)
+}
+
+func UpdateByPrimaryKeys(ctx context.Context) {
+	var (
+		req = &sqlexecutor.UpdateByPrimaryKeys{
+			Table:        "users",
+			DisableCache: true,
+		}
+	)
+
+	data := map[string]interface{}{
+		"id":   "67d299ad4244a581108b7da4",
+		"type": "system",
+		//"created_at": time.Now(),
+	}
+
+	dataConverted, _ := grpcapi.ConvertInterfaceToAny(data)
+	req.Data = dataConverted
+
+	conn, err := grpctil.NewClient()
+	if err != nil {
+		return
+	}
+
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).UpdateByPrimaryKeys(ctx, req)
+	if err != nil {
+		fmt.Println(err.Error())
 		return
 	}
 
