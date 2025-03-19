@@ -64,7 +64,7 @@ func GetJs() jetstream.JetStream {
 }
 
 func RegisterReqrep(ctx context.Context) (err error) {
-	if err = ReqrepQueueSubscribe(ctx, GetFindByPrimaryKeysSubject(), handler.FindByPrimaryKeys); err != nil {
+	if err = ReqrepQueueSubscribe(ctx, GetFindByPKSubject(), handler.FindByPK); err != nil {
 		return
 	}
 	return

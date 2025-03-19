@@ -4,24 +4,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/goccy/go-json"
 	"github.com/redis/go-redis/v9"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/model/entity"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
-	"runtime"
+	"github.com/vothanhdo2602/hicon/internal/orm"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
+	"reflect"
 	"sync"
+	"time"
 )
 
 var (
 	client *redis.Client
 )
 
-func Init(ctx context.Context, wg *sync.WaitGroup) error {
+func Init(ctx context.Context, wg *sync.WaitGroup, rdEnv *config.Redis) error {
 	var (
 		logger = log.WithCtx(ctx)
-		rdEnv  = config.GetENV().DB.Redis
 		addr   = fmt.Sprintf("%s:%d", rdEnv.Host, rdEnv.Port)
 	)
 
@@ -32,9 +36,13 @@ func Init(ctx context.Context, wg *sync.WaitGroup) error {
 	client = redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Username: rdEnv.Username,
-		Password: rdEnv.Password,
-		DB:       0,
-		PoolSize: 30 * runtime.GOMAXPROCS(0),
+		//Password: rdEnv.Password,
+		DB:              0,
+		PoolSize:        rdEnv.PoolSize,
+		MaxIdleConns:    rdEnv.PoolSize,
+		MinIdleConns:    rdEnv.PoolSize,
+		MaxActiveConns:  3,
+		ConnMaxIdleTime: time.Duration(300) * time.Second,
 	})
 
 	if err := client.Ping(ctx).Err(); err != nil {
@@ -50,22 +58,26 @@ func GetRedis() *redis.Client {
 	return client
 }
 
-func HSet(ctx context.Context, database, table string, m interface{}) {
+func HSet(ctx context.Context, mp *constant.ModelParams, m interface{}) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()
-		key    = entity.GetEntityBucketKey(database, table)
+		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
+		pk     = entity.GetPK(mp.Table, m)
 	)
 
-	pipe.HSet(ctx, key, entity.GetPMKeys(table, m), m)
-	pipe.HExpire(ctx, key, constant.Expiry10Minutes, entity.GetPMKeys(table, m))
+	v, _ := json.Marshal(m)
+	pipe.HSet(ctx, key, pk, v)
+	pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
+
+	fmt.Println("HSet pk", pk)
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		logger.Error(err.Error())
 	}
 }
 
-func HMSet(ctx context.Context, database, table string, data []interface{}) {
+func HMSet(ctx context.Context, mp *constant.ModelParams, data []interface{}) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()
@@ -75,11 +87,11 @@ func HMSet(ctx context.Context, database, table string, data []interface{}) {
 		return
 	}
 
-	key := entity.GetEntityBucketKey(database, table)
+	key := entity.GetEntityBucketKey(mp.Database, mp.Table)
 	for _, m := range data {
-		pmKey := entity.GetPMKeys(table, m)
-		pipe.HSet(ctx, key, pmKey, m)
-		pipe.HExpire(ctx, key, constant.Expiry10Minutes, pmKey)
+		pk := entity.GetPK(mp.Table, m)
+		pipe.HSet(ctx, key, pk, m)
+		pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
 	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
@@ -87,13 +99,14 @@ func HMSet(ctx context.Context, database, table string, data []interface{}) {
 	}
 }
 
-func HGet(ctx context.Context, database, table string, m interface{}) interface{} {
+func HGet(ctx context.Context, mp *constant.ModelParams, m interface{}) interface{} {
 	var (
 		logger = log.WithCtx(ctx)
-		key    = entity.GetEntityBucketKey(database, table)
+		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
+		pk     = entity.GetPK(mp.Table, m)
 	)
 
-	r, err := client.HGet(ctx, key, entity.GetPMKeys(table, m)).Result()
+	r, err := client.HGet(ctx, key, pk).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			logger.Error(err.Error())
@@ -101,95 +114,160 @@ func HGet(ctx context.Context, database, table string, m interface{}) interface{
 		return nil
 	}
 
+	client.HExpire(ctx, key, constant.Expiry10Minutes, pk)
+
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
 
-	return &m
+	return m
 }
 
-//func HMGet[T entity.BaseEntity[T]](ctx context.Context, database, table string, fields []string) []T {
-//	var (
-//		logger = log.WithCtx(ctx)
-//		key    = entity.GetEntityBucketKey(database, table)
-//	)
-//	cacheData, err := client.HMGet(ctx, key, fields...).Result()
-//	models := make([]T, len(cacheData))
-//	if err != nil {
-//		if !errors.Is(err, redis.Nil) {
-//			logger.Error(err.Error())
-//		}
-//		return models
-//	}
-//
-//	for i, v := range cacheData {
-//		pjson.Unmarshal(ctx, []byte(v.(string)), &models[i])
-//	}
-//
-//	return models
-//}
-
-func hGetAllWithSQL[T entity.BaseEntity[T]](ctx context.Context, database, table, sql string) (models []T, err error) {
+func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interface{}) {
 	var (
-		logger = log.WithCtx(ctx)
-		key    = entity.GetSQLBucketKey(database)
+		logger       = log.WithCtx(ctx)
+		pipe         = client.Pipeline()
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
 	)
-	r, err := client.HGet(ctx, key, sql).Result()
+
+	// Reference data
+	refModel, err := config.TransformModel(mp.Table, nil, m, config.RefModelType)
+	if err != nil {
+		return
+	}
+
+	refModelBytes, _ := json.Marshal(refModel)
+	pipe.HSet(ctx, sqlBucketKey, sql, refModelBytes)
+	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, sql)
+
+	CacheNestedModel(ctx, mp, m, pipe)
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+	//fmt.Println("@@@@@@@@@@2", cmders)
+}
+
+func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
+	var (
+		logger       = log.WithCtx(ctx)
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
+	)
+
+	r, err := client.HGet(ctx, sqlBucketKey, sql).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			logger.Error(err.Error())
 		}
-		return models, err
+		return nil
 	}
 
-	pjson.Unmarshal(ctx, []byte(r), &models)
+	client.HExpire(ctx, sqlBucketKey, constant.Expiry10Minutes, sql)
 
-	return models, nil
+	_ = pjson.Unmarshal(ctx, []byte(r), &m)
+
+	m = FulfillNestedModel(ctx, mp, m, findByPKFn)
+
+	return m
 }
 
-func HSetAllWithSQL[T entity.BaseEntity[T]](ctx context.Context, database, table, sql string, data []T) {
+func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface{}, pipe redis.Pipeliner) {
 	var (
-		logger             = log.WithCtx(ctx)
-		pipe               = client.Pipeline()
-		mapBucketKeyModels = map[string]map[string]any{}
-		refModels          []T
-		sqlBucketKey       = entity.GetSQLBucketKey(database)
+		relCols = config.GetModelRegistry().GetTableConfiguration(mp.Table).RelationColumns
+		pk      = entity.GetPK(mp.Table, m)
+		key     = entity.GetEntityBucketKey(mp.Database, mp.Table)
 	)
 
-	if len(data) == 0 {
+	newModel, err := config.TransformModel(mp.Table, nil, m, config.PtrModelType)
+	if err != nil {
 		return
 	}
 
-	//for _, m := range data {
-	//	refModels = append(refModels, m.GetCacheEntity(database, table))
-	//}
+	newModelBytes, _ := json.Marshal(newModel)
+	pipe.HSet(ctx, key, pk, newModelBytes)
+	pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
 
-	for bucketKey, models := range mapBucketKeyModels {
-		var fields []string
-		for field := range models {
-			fields = append(fields, field)
+	val := entity.GetReflectValue(m)
+	for _, c := range relCols {
+		fields := val.FieldByName(cases.Title(language.English).String(c.Name))
+		if !fields.IsValid() || fields.IsZero() {
+			continue
 		}
 
-		pipe.HSet(ctx, bucketKey, models)
-		pipe.HExpire(ctx, bucketKey, constant.Expiry10Minutes, fields...)
-	}
+		newMP := &constant.ModelParams{
+			Table:    c.RefTable,
+			Database: mp.Database,
+			ModeType: config.PtrModelType,
+		}
 
-	// Reference data
-	pipe.HSet(ctx, sqlBucketKey, sql, refModels)
-	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, sql)
-
-	if _, err := pipe.Exec(ctx); err != nil {
-		logger.Error(err.Error())
+		switch c.Type {
+		case orm.HasOne, orm.BelongsTo:
+			CacheNestedModel(ctx, newMP, fields.Interface(), pipe)
+		case orm.HasMany, orm.HasManyToMany:
+			for _, field := range fields.Interface().([]interface{}) {
+				CacheNestedModel(ctx, newMP, field, pipe)
+			}
+		}
 	}
 }
 
-// func HGetAllWithSQL[T entity.BaseEntity[T]](ctx context.Context, sql string) (models []T, err error) {
-// 	var (
-// 		pipe = client.Pipeline()
-// 	)
-//
-// 	r, err := hGetAllWithSQL[T](ctx, sql)
-// 	if err != nil {
-// 		return models, err
-// 	}
-//
-// 	return
-// }
+func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
+	var (
+		relCols = config.GetModelRegistry().GetTableConfiguration(mp.Table).RelationColumns
+		pk      = entity.GetPK(mp.Table, m)
+		wg      sync.WaitGroup
+	)
+
+	mp.ModeType = config.DefaultModelType
+	newModel, _, _ := findByPKFn(ctx, m, pk, mp)
+	if newModel == nil {
+		return nil
+	}
+
+	val := entity.GetReflectValue(m)
+	newVal := entity.GetReflectValue(newModel)
+	for _, c := range relCols {
+		var (
+			name      = cases.Title(language.English).String(c.Name)
+			fields    = val.FieldByName(name)
+			newFields = newVal.FieldByName(name)
+			newMP     = &constant.ModelParams{
+				Table:    c.RefTable,
+				Database: mp.Database,
+				ModeType: mp.ModeType,
+			}
+			fieldsInterface = fields.Interface()
+		)
+
+		if !fields.IsValid() || fields.IsZero() {
+			continue
+		}
+
+		switch c.Type {
+		case orm.HasOne, orm.BelongsTo:
+			wg.Add(1)
+			go func(fieldsInterface interface{}) {
+				defer wg.Done()
+				newFields.Set(reflect.ValueOf(FulfillNestedModel(ctx, newMP, fieldsInterface, findByPKFn)))
+			}(fieldsInterface)
+		case orm.HasMany, orm.HasManyToMany:
+			var (
+				newArr = make([]interface{}, len(fieldsInterface.([]interface{})))
+			)
+			for i, field := range fieldsInterface.([]interface{}) {
+				wg.Add(1)
+				go func(i int, fieldsInterface interface{}) {
+					defer wg.Done()
+					newArr[i] = FulfillNestedModel(ctx, newMP, field, findByPKFn)
+				}(i, field)
+			}
+
+			newFields.Set(reflect.ValueOf(newArr))
+		}
+	}
+	wg.Wait()
+
+	//b, _ := json.MarshalIndent(newModel, "", " ")
+	//fmt.Println("MarshalIndent FulfillNestedModel", string(b))
+
+	return newModel
+}

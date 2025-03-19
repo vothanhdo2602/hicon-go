@@ -2,7 +2,7 @@ package natsio
 
 const (
 	UpsertConfigurationChannel = "update_config"
-	FindByPrimaryKeysChannel   = "find_by_id"
+	FindByPKChannel            = "find_by_id"
 )
 
 const (

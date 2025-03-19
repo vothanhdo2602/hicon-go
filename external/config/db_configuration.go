@@ -23,25 +23,41 @@ type DBConfiguration struct {
 
 type ModelRegistry struct {
 	TableConfigurations map[string]*TableConfiguration
-	Models              map[string][]reflect.StructField
-	PtrModels           map[string][]reflect.StructField
+	Models              map[string][]reflect.StructField // model with full columns and relations
+	PtrModels           map[string][]reflect.StructField // model for cache and update action
+	RefModels           map[string][]reflect.StructField // reference model for cache
 }
 
-func (s *ModelRegistry) GetModelBuilder(tbl string, ptrModel bool) []reflect.StructField {
-	if ptrModel {
+const (
+	DefaultModelType = "default_model_type"
+	PtrModelType     = "ptr_model_type"
+	RefModelType     = "ref_model_type"
+)
+
+func (s *ModelRegistry) GetModelBuilder(tbl, modelType string) []reflect.StructField {
+	switch modelType {
+	case DefaultModelType:
+		return s.Models[tbl]
+	case PtrModelType:
 		return s.PtrModels[tbl]
+	case RefModelType:
+		return s.RefModels[tbl]
 	}
-	return s.Models[tbl]
+	return []reflect.StructField{}
 }
 
 type TableConfiguration struct {
-	Name                  string
-	PrimaryColumns        map[string]interface{}
-	ColumnConfigs         map[string]*ColumnConfig
-	RelationColumnConfigs map[string]*RelationColumnConfig
+	Name            string
+	PrimaryColumns  map[string]interface{}
+	ColumnConfigs   map[string]*ColumnConfig
+	RelationColumns map[string]*RelationColumn
 }
 
-type RelationColumnConfig struct {
+func (s *ModelRegistry) GetTableConfiguration(tbl string) *TableConfiguration {
+	return s.TableConfigurations[tbl]
+}
+
+type RelationColumn struct {
 	Name     string
 	RefTable string
 	Type     string
@@ -70,6 +86,7 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 			TableConfigurations: map[string]*TableConfiguration{},
 			Models:              map[string][]reflect.StructField{},
 			PtrModels:           map[string][]reflect.StructField{},
+			RefModels:           map[string][]reflect.StructField{},
 		},
 	}
 
@@ -81,10 +98,10 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 
 	for _, t := range req.TableConfigurations {
 		tblCfg := &TableConfiguration{
-			Name:                  t.Name,
-			ColumnConfigs:         map[string]*ColumnConfig{},
-			PrimaryColumns:        map[string]interface{}{},
-			RelationColumnConfigs: map[string]*RelationColumnConfig{},
+			Name:            t.Name,
+			ColumnConfigs:   map[string]*ColumnConfig{},
+			PrimaryColumns:  map[string]interface{}{},
+			RelationColumns: map[string]*RelationColumn{},
 		}
 
 		for _, col := range t.ColumnConfigs {
@@ -103,8 +120,8 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 			return nil, errors.New(fmt.Sprintf("Table %s has no primary columns", tblCfg.Name))
 		}
 
-		for _, col := range t.RelationColumnConfigs {
-			tblCfg.RelationColumnConfigs[col.Name] = &RelationColumnConfig{
+		for _, col := range t.RelationColumns {
+			tblCfg.RelationColumns[col.Name] = &RelationColumn{
 				Name:     col.Name,
 				RefTable: col.RefTable,
 				Type:     col.Type,
@@ -116,4 +133,15 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 	}
 
 	return dbCfg, nil
+}
+
+func NewRedisConfiguration(req *requestmodel.UpsertConfiguration) *Redis {
+	return &Redis{
+		Host:     req.Redis.Host,
+		Port:     req.Redis.Port,
+		Username: req.Redis.Username,
+		Password: req.Redis.Password,
+		DB:       req.Redis.DB,
+		PoolSize: req.Redis.PoolSize,
+	}
 }

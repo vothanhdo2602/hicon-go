@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
-	"github.com/vothanhdo2602/hicon/external/util/commontil"
+	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
 	"github.com/vothanhdo2602/hicon/internal/orm"
@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	FindByPrimaryKeysAction = "find_by_primary_keys_action"
-	FindAllAction           = "find_all_action"
-	CustomLockKey           = "custom_lock_key_action"
+	FindByPKAction = "find_by_primary_keys_action"
+	FindAllAction  = "find_all_action"
+	CustomLockKey  = "custom_lock_key_action"
 )
 
 func GetCustomLockKey(lockKey string) string {
@@ -33,12 +33,12 @@ type dbInterface interface {
 }
 
 type BaseInterface interface {
-	FindByPrimaryKeys(ctx context.Context, primaryKeys map[string]interface{}, id string, md *ModelParams) (m interface{}, err error, shared bool)
-	ScanOne(ctx context.Context, sql dbInterface, model interface{}, md *ModelParams, values ...any) (m interface{}, err error, shared bool)
-	Scan(ctx context.Context, sql dbInterface, models interface{}, md *ModelParams, values ...any) (interface{}, error, bool)
-	Exec(ctx context.Context, stringSQL, lockKey string, md *ModelParams, args ...any) (interface{}, error, bool)
-	BulkInsert(ctx context.Context, models interface{}, md *ModelParams) (m interface{}, err error)
-	UpdateByPrimaryKeys(ctx context.Context, m interface{}, md *ModelParams) (r interface{}, err error)
+	FindByPK(ctx context.Context, pk interface{}, id string, mp *constant.ModelParams) (m interface{}, err error, shared bool)
+	FindOne(ctx context.Context, sql dbInterface, model interface{}, mp *constant.ModelParams, values ...any) (m interface{}, err error, shared bool)
+	FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool)
+	Exec(ctx context.Context, stringSQL, lockKey string, args ...any) (interface{}, error, bool)
+	BulkInsert(ctx context.Context, models interface{}, mp *constant.ModelParams) (m interface{}, err error)
+	UpdateByPK(ctx context.Context, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
 	//InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
 	//UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
 }
@@ -48,38 +48,29 @@ type baseImpl struct {
 	mu sync.Mutex
 }
 
-type ModelParams struct {
-	Database     string
-	Table        string
-	DisableCache bool
-	LockKey      string
-}
-
-func (s *baseImpl) FindByPrimaryKeys(ctx context.Context, primaryKeys map[string]interface{}, id string, md *ModelParams) (interface{}, error, bool) {
+func (s *baseImpl) FindByPK(ctx context.Context, m interface{}, id string, mp *constant.ModelParams) (interface{}, error, bool) {
 	var (
-		key = fmt.Sprintf("%s:%s", FindByPrimaryKeysAction, id)
+		key = fmt.Sprintf("%s:%s", FindByPKAction, id)
 	)
 
 	v, err, shared := s.g.Do(key, func() (interface{}, error) {
-		newModel, _ := config.TransformModel(md.Table, nil, primaryKeys, false)
-		return s.findByPrimaryKeys(ctx, newModel, md)
+		newModel, _ := config.TransformModel(mp.Table, nil, m, mp.ModeType)
+		return s.findByPK(ctx, newModel, mp)
 	})
 
 	return v, err, shared
 }
 
-func (s *baseImpl) findByPrimaryKeys(ctx context.Context, m interface{}, md *ModelParams) (interface{}, error) {
+func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *constant.ModelParams) (interface{}, error) {
 	var (
 		logger = log.WithCtx(ctx)
 		db     = orm.GetDB()
 		sql    = db.NewSelect().Model(m)
 	)
 
-	if !md.DisableCache {
-		cacheModel := rd.HGet(ctx, md.Database, md.Table, m)
+	if !mp.DisableCache {
+		cacheModel := rd.HGet(ctx, mp, m)
 		if cacheModel != nil {
-			go rd.HSet(commontil.CopyContext(ctx), md.Database, md.Table, cacheModel)
-
 			return cacheModel, nil
 		}
 	}
@@ -94,13 +85,13 @@ func (s *baseImpl) findByPrimaryKeys(ctx context.Context, m interface{}, md *Mod
 		return nil, err
 	}
 
-	if !md.DisableCache {
-		//go rd.HSet(bgCtx, m)
+	if !mp.DisableCache {
+		rd.HSet(ctx, mp, m)
 	}
-	return &m, nil
+	return m, nil
 }
 
-func (s *baseImpl) Scan(ctx context.Context, sql dbInterface, models interface{}, md *ModelParams, values ...any) (interface{}, error, bool) {
+func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool) {
 	var (
 		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
 	)
@@ -130,15 +121,23 @@ func (s *baseImpl) Scan(ctx context.Context, sql dbInterface, models interface{}
 	return v, err, shared
 }
 
-func (s *baseImpl) ScanOne(ctx context.Context, sql dbInterface, m interface{}, md *ModelParams, values ...any) (interface{}, error, bool) {
+func (s *baseImpl) FindOne(ctx context.Context, sql dbInterface, m interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool) {
 	var (
-		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
+		sqlStr = sql.String()
+		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sqlStr)
 	)
 
 	v, err, shared := s.g.Do(sqlKey, func() (interface{}, error) {
 		var (
 			logger = log.WithCtx(ctx)
 		)
+
+		if !mp.DisableCache {
+			cacheModel := rd.HGetSQL(ctx, mp, sqlStr, m, s.FindByPK)
+			if cacheModel != nil {
+				return cacheModel, nil
+			}
+		}
 
 		err := sql.Scan(ctx, values...)
 		if err != nil {
@@ -150,8 +149,8 @@ func (s *baseImpl) ScanOne(ctx context.Context, sql dbInterface, m interface{}, 
 			return nil, err
 		}
 
-		if !md.DisableCache {
-			//go rd.HSet(commontil.CopyContext(ctx), m)
+		if !mp.DisableCache {
+			rd.HSetSQL(ctx, mp, sqlStr, m)
 		}
 
 		return &m, err
@@ -164,7 +163,7 @@ func (s *baseImpl) ScanOne(ctx context.Context, sql dbInterface, m interface{}, 
 	return v, err, shared
 }
 
-func (s *baseImpl) Exec(ctx context.Context, stringSQL, lockKey string, md *ModelParams, args ...any) (interface{}, error, bool) {
+func (s *baseImpl) Exec(ctx context.Context, stringSQL, lockKey string, args ...any) (interface{}, error, bool) {
 	fn := func() (interface{}, error) {
 		var (
 			logger = log.WithCtx(ctx)
@@ -182,7 +181,7 @@ func (s *baseImpl) Exec(ctx context.Context, stringSQL, lockKey string, md *Mode
 		}
 		defer rows.Close()
 
-		return s.scanRows(rows)
+		return s.scanRows(ctx, rows)
 	}
 
 	if lockKey == "" {
@@ -197,14 +196,14 @@ func (s *baseImpl) Exec(ctx context.Context, stringSQL, lockKey string, md *Mode
 	return s.g.Do(sqlKey, fn)
 }
 
-func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, md *ModelParams) (m interface{}, err error) {
+func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, mp *constant.ModelParams) (m interface{}, err error) {
 	var (
 		db     = orm.GetDB()
 		logger = log.WithCtx(ctx)
 		sql    = db.NewInsert().Model(models)
 	)
 
-	if !md.DisableCache {
+	if !mp.DisableCache {
 		sql.Returning("*")
 	} else {
 		sql.Returning("NULL")
@@ -216,18 +215,17 @@ func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, md *Model
 		return nil, err
 	}
 
-	//go rd.HMSet(commontil.CopyContext(ctx), models)
 	return models, nil
 }
 
-func (s *baseImpl) UpdateByPrimaryKeys(ctx context.Context, m interface{}, md *ModelParams) (r interface{}, err error) {
+func (s *baseImpl) UpdateByPK(ctx context.Context, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
 	var (
 		db     = orm.GetDB()
 		logger = log.WithCtx(ctx)
 		sql    = db.NewUpdate().Model(m).WherePK().OmitZero()
 	)
 
-	if !md.DisableCache {
+	if !mp.DisableCache {
 		sql.Returning("*")
 	} else {
 		sql.Returning("NULL")
@@ -239,13 +237,13 @@ func (s *baseImpl) UpdateByPrimaryKeys(ctx context.Context, m interface{}, md *M
 		return nil, err
 	}
 
-	//go rd.HSet(commontil.CopyContext(ctx), *m)
 	return m, err
 }
 
-func (s *baseImpl) scanRows(rows *dbsql.Rows) ([]interface{}, error) {
+func (s *baseImpl) scanRows(ctx context.Context, rows *dbsql.Rows) ([]interface{}, error) {
 	var (
 		models []interface{}
+		logger = log.WithCtx(ctx)
 	)
 
 	columns, err := rows.Columns()
@@ -267,7 +265,8 @@ func (s *baseImpl) scanRows(rows *dbsql.Rows) ([]interface{}, error) {
 
 		err = rows.Scan(scanArgs...)
 		if err != nil {
-			panic(err)
+			logger.Error(err.Error())
+			return nil, err
 		}
 
 		for i, col := range columns {

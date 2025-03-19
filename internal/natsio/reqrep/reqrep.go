@@ -28,14 +28,14 @@ func UpsertConfiguration(ctx context.Context, data *requestmodel.UpsertConfigura
 	return nil
 }
 
-func FindByPrimaryKeys(ctx context.Context, data *requestmodel.FindByPrimaryKeys) (*natstil.BaseResponse[any], error) {
+func FindByPK(ctx context.Context, data *requestmodel.FindByPK) (*natstil.BaseResponse[any], error) {
 	var (
 		resp natstil.BaseResponse[any]
 	)
 
 	req, _ := pjson.Marshal(ctx, data)
 
-	msg, err := natsio.GetNC().Request(natsio.GetFindByPrimaryKeysSubject(), req, 10*time.Second)
+	msg, err := natsio.GetNC().Request(natsio.GetFindByPKSubject(), req, 10*time.Second)
 	if err != nil {
 		return nil, err
 	}

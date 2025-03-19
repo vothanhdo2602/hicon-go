@@ -24,7 +24,7 @@ type CustomBaseModel struct {
 	bun.BaseModel
 }
 
-func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField, []reflect.StructField, error) {
+func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField, []reflect.StructField, []reflect.StructField, error) {
 	var (
 		// Embedded BaseModel with table name tag
 		embeddedBaseModel = reflect.StructField{
@@ -37,6 +37,9 @@ func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField,
 			embeddedBaseModel,
 		}
 		ptrFields = []reflect.StructField{
+			embeddedBaseModel,
+		}
+		refFields = []reflect.StructField{
 			embeddedBaseModel,
 		}
 	)
@@ -70,6 +73,10 @@ func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField,
 		}
 		fields = append(fields, field)
 
+		if col.IsPrimaryKey {
+			refFields = append(refFields, field)
+		}
+
 		ptrField := reflect.StructField{
 			Name: name,
 			Type: reflect.TypeOf(ptrFieldType),
@@ -79,36 +86,49 @@ func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField,
 	}
 
 	// Create instance
-	return fields, ptrFields, nil
+	return fields, ptrFields, refFields, nil
 }
 
-func MapRelationToEntity(tableConfig *config.TableConfiguration, entities map[string][]reflect.StructField) error {
-	for colName, col := range tableConfig.RelationColumnConfigs {
+func MapRelationToEntity(tableConfig *config.TableConfiguration, entities map[string][]reflect.StructField, refModels map[string][]reflect.StructField) error {
+	for colName, col := range tableConfig.RelationColumns {
 		if _, ok := entities[col.RefTable]; !ok {
 			return errors.New(fmt.Sprintf("Table %s not found", col.RefTable))
 		}
 
 		var (
-			fieldType reflect.Type
-			modelType = reflect.StructOf(entities[col.RefTable])
+			fieldType    reflect.Type
+			refFieldType reflect.Type
+			modelType    = reflect.StructOf(entities[col.RefTable])
+			refModelType = reflect.StructOf(refModels[col.RefTable])
+			name         = cases.Title(language.English).String(colName)
+			tag          = reflect.StructTag(fmt.Sprintf(`json:"%s,omitempty" bun:"rel:%s,join:%s"`, colName, col.Type, col.Join))
 		)
 
 		switch col.Type {
 		case HasOne, BelongsTo:
 			fieldType = reflect.PointerTo(modelType)
+			refFieldType = reflect.PointerTo(refModelType)
 		case HasMany, HasManyToMany:
 			fieldType = reflect.SliceOf(modelType)
+			refFieldType = reflect.SliceOf(refModelType)
 		default:
 			return errors.New(fmt.Sprintf("unsupported relation type: %s, just in 'array' or 'object'", col.Type))
 		}
 
 		// Add field with both json and bun tags
 		field := reflect.StructField{
-			Name: cases.Title(language.English).String(colName),
+			Name: name,
 			Type: fieldType,
-			Tag:  reflect.StructTag(fmt.Sprintf(`json:"%s,omitempty" bun:"rel:%s,join:%s"`, colName, col.Type, col.Join)),
+			Tag:  tag,
 		}
 		entities[tableConfig.Name] = append(entities[tableConfig.Name], field)
+
+		refField := reflect.StructField{
+			Name: name,
+			Type: refFieldType,
+			Tag:  tag,
+		}
+		refModels[tableConfig.Name] = append(refModels[tableConfig.Name], refField)
 	}
 
 	return nil
@@ -122,40 +142,40 @@ func getGoType(dbType string, nullable bool) (interface{}, interface{}) {
 
 	switch strings.ToLower(dbType) {
 	case "string", "text", "varchar", "char":
-		fieldType = ""
+		//fieldType = ""
 		ptrFieldType = (*string)(nil)
 
-		if nullable {
-			fieldType = (*string)(nil)
-		}
+		//if nullable {
+		fieldType = (*string)(nil)
+		//}
 	case "time", "timestamp":
-		fieldType = time.Now()
+		//fieldType = time.Time{}
 		ptrFieldType = (*time.Time)(nil)
 
-		if nullable {
-			fieldType = (*time.Time)(nil)
-		}
+		//if nullable {
+		fieldType = (*time.Time)(nil)
+		//}
 	case "int", "integer", "bigint":
-		fieldType = 0
+		//fieldType = 0
 		ptrFieldType = (*int)(nil)
 
-		if nullable {
-			fieldType = (*int)(nil)
-		}
+		//if nullable {
+		fieldType = (*int)(nil)
+		//}
 	case "float", "double", "decimal":
-		fieldType = float64(0)
+		//fieldType = float64(0)
 		ptrFieldType = (*float64)(nil)
 
-		if nullable {
-			fieldType = (*float64)(nil)
-		}
+		//if nullable {
+		fieldType = (*float64)(nil)
+		//}
 	case "bool", "boolean":
-		fieldType = false
+		//fieldType = false
 		ptrFieldType = (*bool)(nil)
 
-		if nullable {
-			fieldType = (*bool)(nil)
-		}
+		//if nullable {
+		fieldType = (*bool)(nil)
+		//}
 	default:
 		fieldType = interface{}(nil)
 		ptrFieldType = interface{}(nil)

@@ -10,7 +10,11 @@ func isDisableCache(localCache bool) bool {
 		env = config.GetENV()
 	)
 
-	if !env.DB.DBConfiguration.DisableCache || rd.GetRedis() == nil {
+	if env.DB.DBConfiguration.DisableCache {
+		return true
+	}
+
+	if rd.GetRedis() == nil {
 		return true
 	}
 

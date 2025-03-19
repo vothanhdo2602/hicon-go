@@ -24,15 +24,14 @@ func GetEntityBucketKey(database, tableName string) string {
 	return fmt.Sprintf("%s:%s", database, tableName)
 }
 
-func GetPMKeys(table string, m interface{}) string {
+func GetPK(table string, m interface{}) string {
 	var (
-		primaryKeys = config.GetModelRegistry().TableConfigurations[table].PrimaryColumns
-		keys        []string
+		pk   = config.GetModelRegistry().TableConfigurations[table].PrimaryColumns
+		keys []string
 	)
 
 	val := GetReflectValue(m)
-
-	for k := range primaryKeys {
+	for k := range pk {
 		keys = append(keys, GetValueByNameAsString(val, k))
 	}
 
@@ -48,13 +47,17 @@ func GetReflectValue(m interface{}) reflect.Value {
 }
 
 func GetSQLBucketKey(database string) string {
-	return fmt.Sprintf("%s:%s", database, SQLBucketKey)
+	return fmt.Sprintf("%s:%s", SQLBucketKey, database)
 }
 
 func GetValueByNameAsString(val reflect.Value, fieldName string) string {
 	field := val.FieldByName(cases.Title(language.English).String(fieldName))
 	if !field.IsValid() {
 		return ""
+	}
+
+	if field.Kind() == reflect.Ptr {
+		field = field.Elem()
 	}
 
 	switch field.Kind() {

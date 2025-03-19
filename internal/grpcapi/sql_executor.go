@@ -40,6 +40,7 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 				Username: data.Redis.Username,
 				Password: data.Redis.Password,
 				DB:       int(data.Redis.Db),
+				PoolSize: int(data.Redis.PoolSize),
 			},
 			TableConfigurations: []*requestmodel.TableConfiguration{},
 			Debug:               data.Debug,
@@ -72,14 +73,14 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 			tbl.ColumnConfigs = append(tbl.ColumnConfigs, col)
 		}
 
-		for _, c := range t.RelationColumnConfigs {
-			col := &requestmodel.RelationColumnConfigs{
+		for _, c := range t.RelationColumns {
+			col := &requestmodel.RelationColumns{
 				Name:     c.Name,
 				RefTable: c.RefTable,
 				Type:     c.Type,
 				Join:     c.Join,
 			}
-			tbl.RelationColumnConfigs = append(tbl.RelationColumnConfigs, col)
+			tbl.RelationColumns = append(tbl.RelationColumns, col)
 		}
 
 		req.TableConfigurations = append(req.TableConfigurations, tbl)
@@ -90,11 +91,11 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 	return NewResponse(r), nil
 }
 
-func (SQLExecutor) FindByPrimaryKeys(ctx context.Context, data *sqlexecutor.FindByPrimaryKeys) (*sqlexecutor.BaseResponse, error) {
+func (SQLExecutor) FindByPK(ctx context.Context, data *sqlexecutor.FindByPK) (*sqlexecutor.BaseResponse, error) {
 	defer commontil.Recover(ctx)
 
 	var (
-		req = &requestmodel.FindByPrimaryKeys{
+		req = &requestmodel.FindByPK{
 			Table:        data.Table,
 			DisableCache: data.DisableCache,
 			Data:         AnyMapToInterfaceMap(data.Data),
@@ -103,7 +104,7 @@ func (SQLExecutor) FindByPrimaryKeys(ctx context.Context, data *sqlexecutor.Find
 		svc = service.SQLExecutor()
 	)
 
-	resp := svc.FindByPrimaryKeys(ctx, req)
+	resp := svc.FindByPK(ctx, req)
 
 	return NewResponse(resp), nil
 }
@@ -229,11 +230,11 @@ func (SQLExecutor) BulkInsert(ctx context.Context, data *sqlexecutor.BulkInsert)
 	return NewResponse(resp), nil
 }
 
-func (SQLExecutor) UpdateByPrimaryKeys(ctx context.Context, data *sqlexecutor.UpdateByPrimaryKeys) (*sqlexecutor.BaseResponse, error) {
+func (SQLExecutor) UpdateByPK(ctx context.Context, data *sqlexecutor.UpdateByPK) (*sqlexecutor.BaseResponse, error) {
 	defer commontil.Recover(ctx)
 
 	var (
-		req = &requestmodel.UpdateByPrimaryKeys{
+		req = &requestmodel.UpdateByPK{
 			LockKey:      data.LockKey,
 			Table:        data.Table,
 			DisableCache: data.DisableCache,
@@ -247,13 +248,13 @@ func (SQLExecutor) UpdateByPrimaryKeys(ctx context.Context, data *sqlexecutor.Up
 	}
 	req.Data = r
 
-	resp := svc.UpdateByPrimaryKeys(ctx, req)
+	resp := svc.UpdateByPK(ctx, req)
 
 	return NewResponse(resp), nil
 }
 
-func (SQLExecutor) BulkUpdateByPrimaryKeys(ctx context.Context, data *sqlexecutor.BulkUpdateByPrimaryKeys) (*sqlexecutor.BaseResponse, error) {
+func (SQLExecutor) BulkUpdateByPK(ctx context.Context, data *sqlexecutor.BulkUpdateByPK) (*sqlexecutor.BaseResponse, error) {
 	defer commontil.Recover(ctx)
 
-	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdateByPrimaryKeys not implemented")
+	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdateByPK not implemented")
 }

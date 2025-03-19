@@ -30,6 +30,7 @@ type Redis struct {
 	Username string
 	Password string
 	DB       int
+	PoolSize int
 }
 
 type TLS struct {
@@ -39,9 +40,9 @@ type TLS struct {
 }
 
 type TableConfiguration struct {
-	Name                  string
-	ColumnConfigs         []*ColumnConfig
-	RelationColumnConfigs []*RelationColumnConfigs
+	Name            string
+	ColumnConfigs   []*ColumnConfig
+	RelationColumns []*RelationColumns
 }
 
 type ColumnConfig struct {
@@ -52,7 +53,7 @@ type ColumnConfig struct {
 	SoftDelete   bool
 }
 
-type RelationColumnConfigs struct {
+type RelationColumns struct {
 	Name     string
 	RefTable string
 	Type     string
@@ -76,14 +77,14 @@ func (m *DBConfiguration) Validate() error {
 	)
 }
 
-type FindByPrimaryKeys struct {
+type FindByPK struct {
 	Table        string
 	DisableCache bool
 	Select       []string
 	Data         map[string]interface{}
 }
 
-func (m *FindByPrimaryKeys) Validate() error {
+func (m *FindByPK) Validate() error {
 	return validation.ValidateStruct(
 		m,
 		validation.Field(&m.Table, validation.Required),
@@ -159,7 +160,7 @@ func (m *BulkInsert) Validate() error {
 	)
 }
 
-type UpdateByPrimaryKeys struct {
+type UpdateByPK struct {
 	// Lock key for concurrent insert operations
 	//The later task will not execute and get the result from the first task with the same lock key in the same time
 	LockKey      string
@@ -168,7 +169,7 @@ type UpdateByPrimaryKeys struct {
 	DisableCache bool
 }
 
-func (m *UpdateByPrimaryKeys) Validate() error {
+func (m *UpdateByPK) Validate() error {
 	return validation.ValidateStruct(
 		m,
 		validation.Field(&m.Table, validation.Required),
@@ -176,7 +177,7 @@ func (m *UpdateByPrimaryKeys) Validate() error {
 	)
 }
 
-type BulkUpdateByPrimaryKeys struct {
+type BulkUpdateByPK struct {
 	// Lock key for concurrent insert operations
 	//The later task will not execute and get the result from the first task with the same lock key in the same time
 	LockKey      string

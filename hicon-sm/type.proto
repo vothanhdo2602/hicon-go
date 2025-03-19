@@ -42,10 +42,11 @@ message ColumnConfig {
   string type = 2;
   bool nullable = 3;
   bool is_primary_key = 4;
+  bool soft_delete = 5;
 }
 
 // Relation Column Configuration
-message RelationColumnConfigs {
+message RelationColumns {
   string name = 1;
   string ref_table = 2;
   string type = 3;
@@ -56,7 +57,7 @@ message RelationColumnConfigs {
 message TableConfiguration {
   string name = 1;
   repeated ColumnConfig column_configs = 2;
-  repeated RelationColumnConfigs relation_column_configs = 3;
+  repeated RelationColumns relation_column_configs = 3;
 }
 
 message Redis {
@@ -65,6 +66,7 @@ message Redis {
   string username = 3;
   string password = 4;
   int32 db = 5;
+  int32 pool_size = 6;
 }
 
 // Main Upsert Configuration
@@ -86,7 +88,7 @@ message Join {
   repeated google.protobuf.Any args = 2;
 }
 
-message FindByPrimaryKeys {
+message FindByPK {
   string table = 1;
   bool disable_cache = 2;
   map<string, google.protobuf.Any> data = 3;
@@ -131,8 +133,8 @@ message BulkInsert {
   bool disable_cache = 4;     // Whether to disable caching
 }
 
-// UpdateByPrimaryKeys represents an update operation using primary keys
-message UpdateByPrimaryKeys {
+// UpdateByPK represents an update operation using primary keys
+message UpdateByPK {
   // Lock key for concurrent insert operations
   // The later task will not execute and get the result from the first task with the same lock key in the same time
   string lock_key = 1;
@@ -141,8 +143,8 @@ message UpdateByPrimaryKeys {
   bool disable_cache = 4;     // Whether to disable caching
 }
 
-// BulkUpdateByPrimaryKeys represents a bulk update operation
-message BulkUpdateByPrimaryKeys {
+// BulkUpdateByPK represents a bulk update operation
+message BulkUpdateByPK {
   // Lock key for concurrent insert operations
   // The later task will not execute and get the result from the first task with the same lock key in the same time
   string lock_key = 1;

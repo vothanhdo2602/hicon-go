@@ -34,6 +34,7 @@ type Redis struct {
 	Username string
 	Password string
 	DB       int
+	PoolSize int
 }
 
 type TLS struct {
@@ -61,6 +62,10 @@ func SetDBConfiguration(cfg *DBConfiguration) {
 	env.DB.DBConfiguration = cfg
 }
 
+func SetRedisConfiguration(cfg *Redis) {
+	env.DB.Redis = cfg
+}
+
 func ConfigurationUpdated() error {
 	if env.DB.DBConfiguration != nil {
 		return nil
@@ -80,15 +85,11 @@ func (s *ModelRegistry) GetNewSliceModel(name string) interface{} {
 	return reflect.New(reflect.SliceOf(reflect.StructOf(s.Models[name]))).Interface()
 }
 
-func ModelWithSelectFields(table string, fields []string, ptrModel bool) interface{} {
+func ModelWithSelectFields(table string, fields []string, modelType string) interface{} {
 	var (
 		reflectFields   []reflect.StructField
-		registeredModel = env.DB.DBConfiguration.ModelRegistry.Models[table]
+		registeredModel = GetModelRegistry().GetModelBuilder(table, modelType)
 	)
-
-	if ptrModel {
-		registeredModel = env.DB.DBConfiguration.ModelRegistry.PtrModels[table]
-	}
 
 	if len(fields) == 0 {
 		return reflect.New(reflect.StructOf(registeredModel)).Interface()
@@ -106,9 +107,9 @@ func ModelWithSelectFields(table string, fields []string, ptrModel bool) interfa
 	return reflect.New(reflect.StructOf(reflectFields)).Interface()
 }
 
-func TransformModel(table string, fields []string, data interface{}, ptrModel bool) (interface{}, error) {
+func TransformModel(table string, fields []string, data interface{}, modelType string) (interface{}, error) {
 	var (
-		newModel = ModelWithSelectFields(table, fields, ptrModel)
+		newModel = ModelWithSelectFields(table, fields, modelType)
 	)
 
 	bytesModel, err := json.Marshal(data)
@@ -124,10 +125,10 @@ func TransformModel(table string, fields []string, data interface{}, ptrModel bo
 	return newModel, nil
 }
 
-func ModelsWithSelectFields(table string, fields []string, ptrModel bool) interface{} {
+func ModelsWithSelectFields(table string, fields []string, modelType string) interface{} {
 	var (
 		reflectFields   []reflect.StructField
-		registeredModel = GetModelRegistry().GetModelBuilder(table, ptrModel)
+		registeredModel = GetModelRegistry().GetModelBuilder(table, modelType)
 	)
 
 	if len(fields) == 0 {
@@ -146,9 +147,9 @@ func ModelsWithSelectFields(table string, fields []string, ptrModel bool) interf
 	return reflect.New(reflect.SliceOf(reflect.StructOf(reflectFields))).Interface()
 }
 
-func TransformModels(table string, fields []string, data interface{}, ptrModel bool) (interface{}, error) {
+func TransformModels(table string, fields []string, data interface{}, modelType string) (interface{}, error) {
 	var (
-		newModels = ModelsWithSelectFields(table, fields, ptrModel)
+		newModels = ModelsWithSelectFields(table, fields, modelType)
 	)
 
 	bytesModel, err := json.Marshal(data)

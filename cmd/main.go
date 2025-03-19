@@ -7,10 +7,8 @@ import (
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/grpctil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
-	"github.com/vothanhdo2602/hicon/external/util/wkrtil"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/internal/grpcapi"
-	"github.com/vothanhdo2602/hicon/internal/natsio"
 	"github.com/vothanhdo2602/hicon/internal/natsio/reqrep"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"google.golang.org/grpc"
@@ -33,15 +31,15 @@ func main() {
 	sqlexecutor.RegisterSQLExecutorServer(srv, grpcapi.SQLExecutor{})
 
 	//init workers
-	wp := wkrtil.NewWorkerPool()
-	defer wp.Stop()
+	//wp := wkrtil.NewWorkerPool()
+	//defer wp.Stop()
 
 	// init nats
-	err := natsio.Init(ctx, nil)
-	if err != nil {
-		logger.Fatal(err.Error())
-	}
-	defer natsio.GracefulStop(ctx)
+	//err := natsio.Init(ctx, nil)
+	//if err != nil {
+	//	logger.Fatal(err.Error())
+	//}
+	//defer natsio.GracefulStop(ctx)
 
 	go func() {
 		UpsertConfiguration(ctx)
@@ -51,10 +49,11 @@ func main() {
 		//for i := 0; i < 100000; i++ {
 		//go FindAll(ctx)
 		//go BulkInsert(ctx)
-		//go FindByPrimaryKeys(ctx)
-		go UpdateByPrimaryKeys(ctx)
+		FindByPK(ctx)
+		FindOne(ctx)
+		//go UpdateByPK(ctx)
 
-		//go FindByPrimaryKeysReqrep(ctx)
+		//go FindByPKReqrep(ctx)
 		//}
 	}()
 
@@ -91,8 +90,9 @@ func UpsertConfiguration(ctx context.Context) {
 						{Name: "id", Type: "text", IsPrimaryKey: true},
 						{Name: "type", Type: "string"},
 						{Name: "created_at", Type: "time"},
+						{Name: "deleted_at", Type: "time", SoftDelete: true},
 					},
-					RelationColumnConfigs: []*sqlexecutor.RelationColumnConfigs{
+					RelationColumns: []*sqlexecutor.RelationColumns{
 						{Name: "profile", Type: orm.HasOne, RefTable: "profiles", Join: "id=user_id"},
 					},
 				},
@@ -103,6 +103,7 @@ func UpsertConfiguration(ctx context.Context) {
 						{Name: "user_id", Type: "string"},
 						{Name: "email", Type: "string"},
 						{Name: "name", Type: "string"},
+						{Name: "deleted_at", Type: "time", SoftDelete: true},
 					},
 				},
 			},
@@ -111,6 +112,7 @@ func UpsertConfiguration(ctx context.Context) {
 				Port:     6379,
 				Username: "hicon",
 				Password: "hicon_private_pwd",
+				PoolSize: 500,
 			},
 		}
 	)
@@ -126,9 +128,9 @@ func UpsertConfiguration(ctx context.Context) {
 	}
 }
 
-func FindByPrimaryKeys(ctx context.Context) {
+func FindByPK(ctx context.Context) {
 	var (
-		req = &sqlexecutor.FindByPrimaryKeys{
+		req = &sqlexecutor.FindByPK{
 			Table: "users",
 			Data: map[string]*anypb.Any{
 				"id": grpcapi.InterfaceToAnyPb("67c567cd8b606b2293af1519"),
@@ -142,7 +144,7 @@ func FindByPrimaryKeys(ctx context.Context) {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindByPrimaryKeys(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindByPK(ctx, req)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -155,7 +157,7 @@ func FindOne(ctx context.Context) {
 	var (
 		req = &sqlexecutor.FindOne{
 			Table:        "users",
-			DisableCache: true,
+			DisableCache: false,
 			Select:       []string{},
 			Where:        []*sqlexecutor.Where{},
 			Relations:    []string{"Profile"},
@@ -259,9 +261,9 @@ func BulkInsert(ctx context.Context) {
 	fmt.Println("resp", resp.Data)
 }
 
-func UpdateByPrimaryKeys(ctx context.Context) {
+func UpdateByPK(ctx context.Context) {
 	var (
-		req = &sqlexecutor.UpdateByPrimaryKeys{
+		req = &sqlexecutor.UpdateByPK{
 			Table:        "users",
 			DisableCache: true,
 		}
@@ -281,7 +283,7 @@ func UpdateByPrimaryKeys(ctx context.Context) {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).UpdateByPrimaryKeys(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).UpdateByPK(ctx, req)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -290,9 +292,9 @@ func UpdateByPrimaryKeys(ctx context.Context) {
 	fmt.Println("resp", resp.Data)
 }
 
-func FindByPrimaryKeysReqrep(ctx context.Context) {
+func FindByPKReqrep(ctx context.Context) {
 	var (
-		req = &requestmodel.FindByPrimaryKeys{
+		req = &requestmodel.FindByPK{
 			Table: "users",
 			Data: map[string]interface{}{
 				"id": "67c567cd8b606b2293af1519",
@@ -300,7 +302,7 @@ func FindByPrimaryKeysReqrep(ctx context.Context) {
 		}
 	)
 
-	resp, err := reqrep.FindByPrimaryKeys(ctx, req)
+	resp, err := reqrep.FindByPK(ctx, req)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

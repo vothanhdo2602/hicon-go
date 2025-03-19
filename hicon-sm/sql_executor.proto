@@ -6,11 +6,11 @@ option go_package = "./sqlexecutor";
 
 service SQLExecutor {
   rpc UpsertConfiguration(hicon.type.UpsertConfiguration) returns (hicon.type.BaseResponse) {}
-  rpc FindByPrimaryKeys(hicon.type.FindByPrimaryKeys) returns (hicon.type.BaseResponse) {}
+  rpc FindByPK(hicon.type.FindByPK) returns (hicon.type.BaseResponse) {}
   rpc FindOne(hicon.type.FindOne) returns (hicon.type.BaseResponse) {}
   rpc FindAll(hicon.type.FindAll) returns (hicon.type.BaseResponse) {}
   rpc Exec(hicon.type.Exec) returns (hicon.type.BaseResponse) {}
   rpc BulkInsert(hicon.type.BulkInsert) returns (hicon.type.BaseResponse) {}
-  rpc UpdateByPrimaryKeys(hicon.type.UpdateByPrimaryKeys) returns (hicon.type.BaseResponse) {}
-  rpc BulkUpdateByPrimaryKeys(hicon.type.BulkUpdateByPrimaryKeys) returns (hicon.type.BaseResponse) {}
+  rpc UpdateByPK(hicon.type.UpdateByPK) returns (hicon.type.BaseResponse) {}
+  rpc BulkUpdateByPK(hicon.type.BulkUpdateByPK) returns (hicon.type.BaseResponse) {}
 }

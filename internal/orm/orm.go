@@ -88,15 +88,17 @@ func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) er
 	logger.Info(fmt.Sprintf("⚡️[%s]: connected to %s", c.Type, addr))
 
 	newDB.AddQueryHook(
-		bundebug.NewQueryHook(bundebug.WithVerbose(true)),
+		bundebug.NewQueryHook(bundebug.WithVerbose(c.Debug)),
 	)
+
+	// open telemetry tracing
+	//newDB.AddQueryHook(bunotel.NewQueryHook(bunotel.WithDBName(c.Database)))
+
+	//newDB.AddQueryHook(&QueryHook{})
 
 	// reassign when done setting
 	// for high availability
 	db = newDB
-
-	// open telemetry tracing
-	//db.AddQueryHook(bunotel.NewQueryHook(bunotel.WithDBName(c.Database)))
 
 	return nil
 }
@@ -104,23 +106,3 @@ func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) er
 func GetDB() bun.IDB {
 	return db
 }
-
-//func GetRealNumberOfConnectionsCanActive() int {
-//	var m map[string]int
-//	rows, err := db.Query(`
-//		SELECT
-//			count(*) FILTER (WHERE state = 'active') AS active_connections
-//		FROM pg_stat_activity
-//		WHERE backend_type = 'client backend';`,
-//	)
-//	if err != nil {
-//		return 0
-//	}
-//
-//	err = rows.Scan(&m)
-//	if err != nil {
-//		return 0
-//	}
-//
-//	return m["active_connections"]
-//}

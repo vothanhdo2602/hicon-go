@@ -21,6 +21,6 @@ func GetUpsertConfigurationSubject() string {
 	return GenerateReqrepSubject(UpsertConfigurationChannel)
 }
 
-func GetFindByPrimaryKeysSubject() string {
-	return GenerateReqrepSubject(FindByPrimaryKeysChannel)
+func GetFindByPKSubject() string {
+	return GenerateReqrepSubject(FindByPKChannel)
 }

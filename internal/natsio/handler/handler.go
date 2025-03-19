@@ -56,7 +56,7 @@ import (
 //			Name:                  t.Name,
 //			ColumnConfigs:         map[string]*config.ColumnConfig{},
 //			PrimaryColumns:        map[string]interface{}{},
-//			RelationColumnConfigs: map[string]*config.RelationColumnConfig{},
+//			RelationColumns: map[string]*config.RelationColumn{},
 //		}
 //
 //		for _, col := range t.ColumnConfigs {
@@ -76,8 +76,8 @@ import (
 //			return
 //		}
 //
-//		for _, col := range t.RelationColumnConfigs {
-//			tblCfg.RelationColumnConfigs[col.Name] = &config.RelationColumnConfig{
+//		for _, col := range t.RelationColumns {
+//			tblCfg.RelationColumns[col.Name] = &config.RelationColumn{
 //				Name:     col.Name,
 //				RefTable: col.RefTable,
 //				Type:     col.Type,
@@ -120,11 +120,11 @@ import (
 //	msg.Data = natstil.R200(nil)
 //}
 
-func FindByPrimaryKeys(msg *nats.Msg) {
+func FindByPK(msg *nats.Msg) {
 	go func(msg *nats.Msg) {
 		var (
 			ctx  = natstil.GetContext(msg)
-			data requestmodel.FindByPrimaryKeys
+			data requestmodel.FindByPK
 		)
 
 		defer commontil.Recover(ctx)
@@ -139,7 +139,7 @@ func FindByPrimaryKeys(msg *nats.Msg) {
 			svc = service.SQLExecutor()
 		)
 
-		resp := svc.FindByPrimaryKeys(ctx, &data)
+		resp := svc.FindByPK(ctx, &data)
 		msg.Data = natstil.R200(resp)
 	}(msg)
 }
