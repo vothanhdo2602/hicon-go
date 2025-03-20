@@ -37,7 +37,7 @@ message DBConfiguration {
 }
 
 // Column Configuration for Table
-message ColumnConfig {
+message Column {
   string name = 1;
   string type = 2;
   bool nullable = 3;
@@ -46,7 +46,7 @@ message ColumnConfig {
 }
 
 // Relation Column Configuration
-message RelationColumns {
+message RelationColumn {
   string name = 1;
   string ref_table = 2;
   string type = 3;
@@ -56,8 +56,8 @@ message RelationColumns {
 // Table Configuration
 message TableConfiguration {
   string name = 1;
-  repeated ColumnConfig column_configs = 2;
-  repeated RelationColumns relation_column_configs = 3;
+  repeated Column columns = 2;
+  repeated RelationColumn relation_columns = 3;
 }
 
 message Redis {
@@ -141,6 +141,7 @@ message UpdateByPK {
   string table = 2;           // Target table name
   google.protobuf.Any data = 3;  // Data to be updated
   bool disable_cache = 4;     // Whether to disable caching
+  repeated Where where = 5;
 }
 
 // BulkUpdateByPK represents a bulk update operation

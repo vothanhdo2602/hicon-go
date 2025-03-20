@@ -1,6 +1,8 @@
 package constant
 
-import "time"
+import (
+	"time"
+)
 
 const (
 	Expiry10Minutes = 10 * time.Minute
@@ -13,4 +15,8 @@ type ModelParams struct {
 	DisableCache bool
 	LockKey      string
 	ModeType     string
+	CacheKey     string
+}
+
+type CacheKeyBuilder struct {
 }

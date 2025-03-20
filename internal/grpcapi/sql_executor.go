@@ -63,13 +63,15 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 			}
 		)
 
-		for _, c := range t.ColumnConfigs {
+		for _, c := range t.Columns {
 			col := &requestmodel.ColumnConfig{
 				Name:         c.Name,
 				Type:         c.Type,
 				Nullable:     c.Nullable,
 				IsPrimaryKey: c.IsPrimaryKey,
+				SoftDelete:   c.SoftDelete,
 			}
+
 			tbl.ColumnConfigs = append(tbl.ColumnConfigs, col)
 		}
 

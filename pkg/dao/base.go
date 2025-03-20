@@ -8,6 +8,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
+	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
 	"github.com/vothanhdo2602/hicon/internal/orm"
@@ -32,15 +33,22 @@ type dbInterface interface {
 	Model(model any) *bun.SelectQuery
 }
 
+type updateQuery interface {
+	Returning(query string, args ...any) *bun.UpdateQuery
+	Model(model any) *bun.UpdateQuery
+	WherePK(cols ...string) *bun.UpdateQuery
+	OmitZero() *bun.UpdateQuery
+	Exec(ctx context.Context, dest ...interface{}) (dbsql.Result, error)
+	String() string
+}
+
 type BaseInterface interface {
 	FindByPK(ctx context.Context, pk interface{}, id string, mp *constant.ModelParams) (m interface{}, err error, shared bool)
 	FindOne(ctx context.Context, sql dbInterface, model interface{}, mp *constant.ModelParams, values ...any) (m interface{}, err error, shared bool)
 	FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool)
 	Exec(ctx context.Context, stringSQL, lockKey string, args ...any) (interface{}, error, bool)
 	BulkInsert(ctx context.Context, models interface{}, mp *constant.ModelParams) (m interface{}, err error)
-	UpdateByPK(ctx context.Context, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
-	//InsertWithTx(ctx context.Context, tx bun.IDB, m *T) error
-	//UpdateWithTxById(ctx context.Context, tx bun.IDB, id string, m *T) error
+	UpdateByPK(ctx context.Context, sql updateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
 }
 
 type baseImpl struct {
@@ -93,13 +101,21 @@ func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *constant.Mod
 
 func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool) {
 	var (
-		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sql.String())
+		sqlStr = sql.String()
+		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sqlStr)
 	)
 
 	v, err, shared := s.g.Do(sqlKey, func() (interface{}, error) {
 		var (
 			logger = log.WithCtx(ctx)
 		)
+
+		if !mp.DisableCache {
+			cacheModel := rd.HGetAllSQL(ctx, mp, sqlStr, models, s.FindByPK)
+			if cacheModel != nil {
+				return cacheModel, nil
+			}
+		}
 
 		err := sql.Scan(ctx, values...)
 		if err != nil {
@@ -109,6 +125,10 @@ func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interfac
 
 			logger.Error(err.Error())
 			return nil, err
+		}
+
+		if !mp.DisableCache {
+			rd.HSetAllSQL(ctx, mp, sqlStr, models)
 		}
 
 		return models, nil
@@ -218,12 +238,12 @@ func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, mp *const
 	return models, nil
 }
 
-func (s *baseImpl) UpdateByPK(ctx context.Context, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+func (s *baseImpl) UpdateByPK(ctx context.Context, sql updateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
 	var (
-		db     = orm.GetDB()
 		logger = log.WithCtx(ctx)
-		sql    = db.NewUpdate().Model(m).WherePK().OmitZero()
 	)
+
+	sql = sql.Model(m).WherePK().OmitZero().Returning("*")
 
 	if !mp.DisableCache {
 		sql.Returning("*")
@@ -235,6 +255,12 @@ func (s *baseImpl) UpdateByPK(ctx context.Context, m interface{}, mp *constant.M
 	if err != nil {
 		logger.Error(err.Error(), zap.String("sql", sql.String()))
 		return nil, err
+	}
+
+	if !mp.DisableCache {
+		go rd.HSet(commontil.CopyContext(ctx), mp, m)
+	} else {
+		go rd.HDel(ctx, mp, m)
 	}
 
 	return m, err

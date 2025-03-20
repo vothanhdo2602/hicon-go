@@ -166,6 +166,7 @@ type UpdateByPK struct {
 	LockKey      string
 	Table        string
 	Data         interface{}
+	Where        []*Where
 	DisableCache bool
 }
 

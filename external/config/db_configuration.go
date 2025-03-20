@@ -109,6 +109,7 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 				Type:         col.Type,
 				Nullable:     col.Nullable,
 				IsPrimaryKey: col.IsPrimaryKey,
+				SoftDelete:   col.SoftDelete,
 			}
 
 			if col.IsPrimaryKey {

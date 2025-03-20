@@ -9,6 +9,7 @@ import (
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/model/entity"
+	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
 	"github.com/vothanhdo2602/hicon/internal/orm"
@@ -37,11 +38,11 @@ func Init(ctx context.Context, wg *sync.WaitGroup, rdEnv *config.Redis) error {
 		Addr:     addr,
 		Username: rdEnv.Username,
 		//Password: rdEnv.Password,
-		DB:              0,
-		PoolSize:        rdEnv.PoolSize,
-		MaxIdleConns:    rdEnv.PoolSize,
-		MinIdleConns:    rdEnv.PoolSize,
-		MaxActiveConns:  3,
+		DB:           0,
+		PoolSize:     rdEnv.PoolSize,
+		MaxIdleConns: rdEnv.PoolSize,
+		MinIdleConns: rdEnv.PoolSize,
+		//MaxActiveConns:  3,
 		ConnMaxIdleTime: time.Duration(300) * time.Second,
 	})
 
@@ -69,8 +70,6 @@ func HSet(ctx context.Context, mp *constant.ModelParams, m interface{}) {
 	v, _ := json.Marshal(m)
 	pipe.HSet(ctx, key, pk, v)
 	pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
-
-	fmt.Println("HSet pk", pk)
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		logger.Error(err.Error())
@@ -114,11 +113,23 @@ func HGet(ctx context.Context, mp *constant.ModelParams, m interface{}) interfac
 		return nil
 	}
 
-	client.HExpire(ctx, key, constant.Expiry10Minutes, pk)
+	go client.HExpire(commontil.CopyContext(ctx), key, constant.Expiry10Minutes, pk)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
 
 	return m
+}
+
+func HDel(ctx context.Context, mp *constant.ModelParams, m interface{}) {
+	var (
+		logger = log.WithCtx(ctx)
+		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
+		pk     = entity.GetPK(mp.Table, m)
+	)
+
+	if _, err := client.HDel(ctx, key, pk).Result(); err != nil {
+		logger.Error(err.Error())
+	}
 }
 
 func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interface{}) {
@@ -144,7 +155,6 @@ func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 	if err != nil {
 		logger.Error(err.Error())
 	}
-	//fmt.Println("@@@@@@@@@@2", cmders)
 }
 
 func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
@@ -161,13 +171,78 @@ func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 		return nil
 	}
 
-	client.HExpire(ctx, sqlBucketKey, constant.Expiry10Minutes, sql)
+	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, sql)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
 
 	m = FulfillNestedModel(ctx, mp, m, findByPKFn)
 
 	return m
+}
+
+func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, models interface{}) {
+	var (
+		logger       = log.WithCtx(ctx)
+		pipe         = client.Pipeline()
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
+	)
+
+	// Reference data
+	refModel, err := config.TransformModels(mp.Table, nil, models, config.RefModelType)
+	if err != nil {
+		return
+	}
+
+	refModelBytes, _ := json.Marshal(refModel)
+	pipe.HSet(ctx, sqlBucketKey, sql, refModelBytes)
+	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, sql)
+
+	if asserted, ok := models.(*[]interface{}); ok {
+		newModels := *asserted
+		for i := range newModels {
+			CacheNestedModel(ctx, mp, newModels[i], pipe)
+		}
+	}
+
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+}
+
+func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, models interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
+	var (
+		logger       = log.WithCtx(ctx)
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
+		wg           sync.WaitGroup
+	)
+
+	r, err := client.HGet(ctx, sqlBucketKey, sql).Result()
+	if err != nil {
+		if !errors.Is(err, redis.Nil) {
+			logger.Error(err.Error())
+		}
+		return nil
+	}
+
+	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, sql)
+
+	_ = pjson.Unmarshal(ctx, []byte(r), &models)
+
+	fmt.Println("@@@@@@@@", models)
+	if asserted, ok := models.(*[]interface{}); ok {
+		newModels := *asserted
+		wg.Add(len(newModels))
+		for i := range newModels {
+			go func(i int) {
+				defer wg.Done()
+				newModels[i] = FulfillNestedModel(ctx, mp, newModels[i], findByPKFn)
+			}(i)
+		}
+		wg.Wait()
+	}
+
+	return models
 }
 
 func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface{}, pipe redis.Pipeliner) {

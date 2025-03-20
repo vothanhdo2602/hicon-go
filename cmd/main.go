@@ -14,7 +14,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/anypb"
 	"net"
-	"time"
 )
 
 func main() {
@@ -44,17 +43,15 @@ func main() {
 	go func() {
 		UpsertConfiguration(ctx)
 
-		time.Sleep(2 * time.Second)
+		for i := 0; i < 10; i++ {
+			go FindAll(ctx)
+			//go BulkInsert(ctx)
+			//go FindByPK(ctx)
+			//go FindOne(ctx)
+			//go UpdateByPK(ctx)
 
-		//for i := 0; i < 100000; i++ {
-		//go FindAll(ctx)
-		//go BulkInsert(ctx)
-		FindByPK(ctx)
-		FindOne(ctx)
-		//go UpdateByPK(ctx)
-
-		//go FindByPKReqrep(ctx)
-		//}
+			//go FindByPKReqrep(ctx)
+		}
 	}()
 
 	l, err := net.Listen("tcp", addr)
@@ -86,19 +83,19 @@ func UpsertConfiguration(ctx context.Context) {
 			TableConfigurations: []*sqlexecutor.TableConfiguration{
 				{
 					Name: "users",
-					ColumnConfigs: []*sqlexecutor.ColumnConfig{
+					Columns: []*sqlexecutor.Column{
 						{Name: "id", Type: "text", IsPrimaryKey: true},
 						{Name: "type", Type: "string"},
 						{Name: "created_at", Type: "time"},
 						{Name: "deleted_at", Type: "time", SoftDelete: true},
 					},
-					RelationColumns: []*sqlexecutor.RelationColumns{
+					RelationColumns: []*sqlexecutor.RelationColumn{
 						{Name: "profile", Type: orm.HasOne, RefTable: "profiles", Join: "id=user_id"},
 					},
 				},
 				{
 					Name: "profiles",
-					ColumnConfigs: []*sqlexecutor.ColumnConfig{
+					Columns: []*sqlexecutor.Column{
 						{Name: "id", Type: "text", IsPrimaryKey: true},
 						{Name: "user_id", Type: "string"},
 						{Name: "email", Type: "string"},
@@ -184,7 +181,7 @@ func FindAll(ctx context.Context) {
 	var (
 		req = &sqlexecutor.FindAll{
 			Table:        "users",
-			DisableCache: true,
+			DisableCache: false,
 			Select:       []string{},
 			Where:        []*sqlexecutor.Where{},
 			Relations:    []string{"profile"},
@@ -239,7 +236,7 @@ func BulkInsert(ctx context.Context) {
 
 	data := []map[string]interface{}{
 		{
-			"id":   "67d299ad4244a581108b7da4",
+			"id":   "67d299ad4244a581108b7ca5",
 			"type": "system",
 		},
 	}
@@ -265,7 +262,7 @@ func UpdateByPK(ctx context.Context) {
 	var (
 		req = &sqlexecutor.UpdateByPK{
 			Table:        "users",
-			DisableCache: true,
+			DisableCache: false,
 		}
 	)
 
