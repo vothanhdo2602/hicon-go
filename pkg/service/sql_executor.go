@@ -12,8 +12,6 @@ import (
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"github.com/vothanhdo2602/hicon/internal/rd"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"reflect"
 	"strings"
 )
@@ -30,6 +28,7 @@ type SQLExecutorInterface interface {
 	Exec(ctx context.Context, req *requestmodel.Exec) *responsemodel.BaseResponse
 	BulkInsert(ctx context.Context, req *requestmodel.BulkInsert) *responsemodel.BaseResponse
 	UpdateByPK(ctx context.Context, req *requestmodel.UpdateByPK) *responsemodel.BaseResponse
+	BulkUpdateByPK(ctx context.Context, req *requestmodel.BulkUpdateByPK) *responsemodel.BaseResponse
 }
 
 type sqlExecutorImpl struct {
@@ -112,7 +111,7 @@ func (s *sqlExecutorImpl) FindByPK(ctx context.Context, req *requestmodel.FindBy
 			DisableCache: isDisableCache(req.DisableCache),
 			ModeType:     config.DefaultModelType,
 		}
-		tableRegistry = dbCfg.ModelRegistry.TableConfigurations[mp.Table]
+		tableRegistry = config.GetModelRegistry().TableConfigurations[mp.Table]
 		arrKeys       []string
 	)
 
@@ -124,8 +123,9 @@ func (s *sqlExecutorImpl) FindByPK(ctx context.Context, req *requestmodel.FindBy
 		return responsemodel.R400(fmt.Sprintf("table %s not found in registerd model", req.Table))
 	}
 
+	mapData := req.Data.(map[string]interface{})
 	for k := range tableRegistry.PrimaryColumns {
-		v, ok := req.Data[k]
+		v, ok := mapData[k]
 		if !ok {
 			return responsemodel.R400(fmt.Sprintf("primary key column %v not found in registered model, please check func update configuration", k))
 		}
@@ -179,7 +179,7 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 	}
 
 	for _, v := range req.Relations {
-		sql.Relation(cases.Title(language.English).String(v))
+		sql.Relation(pstring.Title(v))
 	}
 
 	for _, v := range req.Join {
@@ -239,7 +239,7 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 	}
 
 	for _, v := range req.Relations {
-		sql.Relation(cases.Title(language.English).String(v))
+		sql.Relation(pstring.Title(v))
 	}
 
 	for _, v := range req.OrderBy {
@@ -285,17 +285,17 @@ func (s *sqlExecutorImpl) BulkInsert(ctx context.Context, req *requestmodel.Bulk
 		return responsemodel.R400(err.Error())
 	}
 
-	var (
-		d     = dao.SQLExecutor()
-		dbCfg = config.GetENV().DB.DBConfiguration
-		mp    = &constant.ModelParams{
-			Database:     dbCfg.GetDatabaseName(),
-			Table:        req.Table,
-			DisableCache: isDisableCache(req.DisableCache),
-		}
-	)
-
 	fn := func() (interface{}, error) {
+		var (
+			d     = dao.SQLExecutor()
+			dbCfg = config.GetENV().DB.DBConfiguration
+			mp    = &constant.ModelParams{
+				Database:     dbCfg.GetDatabaseName(),
+				Table:        req.Table,
+				DisableCache: isDisableCache(req.DisableCache),
+			}
+		)
+
 		if err := req.Validate(); err != nil {
 			return nil, err
 		}
@@ -334,18 +334,18 @@ func (s *sqlExecutorImpl) UpdateByPK(ctx context.Context, req *requestmodel.Upda
 		return responsemodel.R400(err.Error())
 	}
 
-	var (
-		d     = dao.SQLExecutor()
-		dbCfg = config.GetENV().DB.DBConfiguration
-		mp    = &constant.ModelParams{
-			Database:     dbCfg.GetDatabaseName(),
-			Table:        req.Table,
-			DisableCache: isDisableCache(req.DisableCache),
-		}
-		sql = orm.GetDB().NewUpdate()
-	)
-
 	fn := func() (interface{}, error) {
+		var (
+			d     = dao.SQLExecutor()
+			dbCfg = config.GetENV().DB.DBConfiguration
+			mp    = &constant.ModelParams{
+				Database:     dbCfg.GetDatabaseName(),
+				Table:        req.Table,
+				DisableCache: isDisableCache(req.DisableCache),
+			}
+			sql = orm.GetDB().NewUpdate()
+		)
+
 		if err := req.Validate(); err != nil {
 			return nil, err
 		}
@@ -360,6 +360,56 @@ func (s *sqlExecutorImpl) UpdateByPK(ctx context.Context, req *requestmodel.Upda
 		}
 
 		return d.UpdateByPK(ctx, sql, m, mp)
+	}
+
+	if req.LockKey == "" {
+		r, err := fn()
+		if err != nil {
+			return responsemodel.R400(err.Error())
+		}
+
+		return responsemodel.R200(r, false)
+	}
+
+	var (
+		key = dao.GetCustomLockKey(req.LockKey)
+	)
+
+	r, err, shared := s.g.Do(key, fn)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	return responsemodel.R200(r, shared)
+}
+
+func (s *sqlExecutorImpl) BulkUpdateByPK(ctx context.Context, req *requestmodel.BulkUpdateByPK) *responsemodel.BaseResponse {
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	fn := func() (interface{}, error) {
+		var (
+			d     = dao.SQLExecutor()
+			dbCfg = config.GetENV().DB.DBConfiguration
+			mp    = &constant.ModelParams{
+				Database:     dbCfg.GetDatabaseName(),
+				Table:        req.Table,
+				DisableCache: isDisableCache(req.DisableCache),
+			}
+			sql = orm.GetDB().NewUpdate().Column(req.Set...)
+		)
+
+		if err := req.Validate(); err != nil {
+			return nil, err
+		}
+
+		m, err := config.TransformModels(req.Table, nil, req.Data, config.PtrModelType)
+		if err != nil {
+			return nil, err
+		}
+
+		return d.BulkUpdateByPK(ctx, sql, m, mp)
 	}
 
 	if req.LockKey == "" {

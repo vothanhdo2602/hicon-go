@@ -7,8 +7,6 @@ import (
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/pkg/service"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type SQLExecutor struct {
@@ -100,11 +98,13 @@ func (SQLExecutor) FindByPK(ctx context.Context, data *sqlexecutor.FindByPK) (*s
 		req = &requestmodel.FindByPK{
 			Table:        data.Table,
 			DisableCache: data.DisableCache,
-			Data:         AnyMapToInterfaceMap(data.Data),
 			Select:       data.Select,
 		}
 		svc = service.SQLExecutor()
 	)
+
+	d, _ := ConvertPbAnyToInterface(data.Data)
+	req.Data = d
 
 	resp := svc.FindByPK(ctx, req)
 
@@ -176,7 +176,7 @@ func (SQLExecutor) FindAll(ctx context.Context, data *sqlexecutor.FindAll) (*sql
 		}
 
 		for _, arg := range rel.Args {
-			val, _ := ConvertAnyToInterface(arg)
+			val, _ := ConvertPbAnyToInterface(arg)
 			j.Args = append(j.Args, val)
 		}
 
@@ -200,7 +200,7 @@ func (SQLExecutor) Exec(ctx context.Context, data *sqlexecutor.Exec) (*sqlexecut
 	)
 
 	for _, arg := range data.Args {
-		val, _ := ConvertAnyToInterface(arg)
+		val, _ := ConvertPbAnyToInterface(arg)
 		req.Args = append(req.Args, val)
 	}
 
@@ -221,7 +221,7 @@ func (SQLExecutor) BulkInsert(ctx context.Context, data *sqlexecutor.BulkInsert)
 		svc = service.SQLExecutor()
 	)
 
-	r, err := SliceConvertAnyToInterface(data.Data)
+	r, err := ConvertSlicePbAnyToSliceInterface(data.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +244,7 @@ func (SQLExecutor) UpdateByPK(ctx context.Context, data *sqlexecutor.UpdateByPK)
 		svc = service.SQLExecutor()
 	)
 
-	r, err := ConvertAnyToInterface(data.Data)
+	r, err := ConvertPbAnyToInterface(data.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -258,5 +258,23 @@ func (SQLExecutor) UpdateByPK(ctx context.Context, data *sqlexecutor.UpdateByPK)
 func (SQLExecutor) BulkUpdateByPK(ctx context.Context, data *sqlexecutor.BulkUpdateByPK) (*sqlexecutor.BaseResponse, error) {
 	defer commontil.Recover(ctx)
 
-	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdateByPK not implemented")
+	var (
+		req = &requestmodel.BulkUpdateByPK{
+			LockKey:      data.LockKey,
+			Table:        data.Table,
+			DisableCache: data.DisableCache,
+			Set:          data.Set,
+		}
+		svc = service.SQLExecutor()
+	)
+
+	r, err := ConvertSlicePbAnyToSliceInterface(data.Data)
+	if err != nil {
+		return nil, err
+	}
+	req.Data = r
+
+	resp := svc.BulkUpdateByPK(ctx, req)
+
+	return NewResponse(resp), nil
 }

@@ -53,7 +53,7 @@ func ConvertInterfaceToAny(v interface{}) (*anypb.Any, error) {
 	return anyValue, err
 }
 
-func ConvertSliceAnyToPbAnySlice(input []map[string]interface{}) ([]*anypb.Any, error) {
+func ConvertSliceAnyToPbAnySlice(input []interface{}) ([]*anypb.Any, error) {
 	result := make([]*anypb.Any, 0, len(input))
 
 	for _, item := range input {
@@ -67,7 +67,7 @@ func ConvertSliceAnyToPbAnySlice(input []map[string]interface{}) ([]*anypb.Any, 
 	return result, nil
 }
 
-func ConvertAnyToInterface(anyValue *anypb.Any) (interface{}, error) {
+func ConvertPbAnyToInterface(anyValue *anypb.Any) (interface{}, error) {
 	var value interface{}
 	bytesValue := &wrappers.BytesValue{}
 	err := anypb.UnmarshalTo(anyValue, bytesValue, proto.UnmarshalOptions{})
@@ -81,10 +81,10 @@ func ConvertAnyToInterface(anyValue *anypb.Any) (interface{}, error) {
 	return value, nil
 }
 
-func SliceConvertAnyToInterface(anyValue []*anypb.Any) ([]interface{}, error) {
+func ConvertSlicePbAnyToSliceInterface(anyValue []*anypb.Any) ([]interface{}, error) {
 	var values []interface{}
 	for _, v := range anyValue {
-		r, err := ConvertAnyToInterface(v)
+		r, err := ConvertPbAnyToInterface(v)
 		if err != nil {
 			return values, err
 		}
@@ -105,7 +105,7 @@ func ConvertWhereProtoToGo(protoWhere *sqlexecutor.Where) (*requestmodel.Where, 
 	}
 
 	for _, arg := range protoWhere.Args {
-		val, _ := ConvertAnyToInterface(arg)
+		val, _ := ConvertPbAnyToInterface(arg)
 		whereGo.Args = append(whereGo.Args, val)
 	}
 

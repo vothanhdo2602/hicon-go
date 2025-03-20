@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"reflect"
 	"strings"
 	"time"
@@ -62,7 +61,7 @@ func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField,
 
 		// Add field with both json and bun tags
 		var (
-			name = cases.Title(language.English).String(colName)
+			name = pstring.Title(colName)
 			tag  = reflect.StructTag(fmt.Sprintf(`json:"%s,omitempty" redis:"%s,omitempty" bun:"%s"`, colName, colName, strings.Join(tags, ",")))
 		)
 
@@ -100,7 +99,7 @@ func MapRelationToEntity(tableConfig *config.TableConfiguration, entities map[st
 			refFieldType reflect.Type
 			modelType    = reflect.StructOf(entities[col.RefTable])
 			refModelType = reflect.StructOf(refModels[col.RefTable])
-			name         = cases.Title(language.English).String(colName)
+			name         = pstring.Title(colName)
 			tag          = reflect.StructTag(fmt.Sprintf(`json:"%s,omitempty" bun:"rel:%s,join:%s"`, colName, col.Type, col.Join))
 		)
 

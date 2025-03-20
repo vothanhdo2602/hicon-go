@@ -33,22 +33,14 @@ type dbInterface interface {
 	Model(model any) *bun.SelectQuery
 }
 
-type updateQuery interface {
-	Returning(query string, args ...any) *bun.UpdateQuery
-	Model(model any) *bun.UpdateQuery
-	WherePK(cols ...string) *bun.UpdateQuery
-	OmitZero() *bun.UpdateQuery
-	Exec(ctx context.Context, dest ...interface{}) (dbsql.Result, error)
-	String() string
-}
-
 type BaseInterface interface {
 	FindByPK(ctx context.Context, pk interface{}, id string, mp *constant.ModelParams) (m interface{}, err error, shared bool)
 	FindOne(ctx context.Context, sql dbInterface, model interface{}, mp *constant.ModelParams, values ...any) (m interface{}, err error, shared bool)
 	FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool)
 	Exec(ctx context.Context, stringSQL, lockKey string, args ...any) (interface{}, error, bool)
 	BulkInsert(ctx context.Context, models interface{}, mp *constant.ModelParams) (m interface{}, err error)
-	UpdateByPK(ctx context.Context, sql updateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
+	UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
+	BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
 }
 
 type baseImpl struct {
@@ -238,7 +230,7 @@ func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, mp *const
 	return models, nil
 }
 
-func (s *baseImpl) UpdateByPK(ctx context.Context, sql updateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
 	)
@@ -266,57 +258,30 @@ func (s *baseImpl) UpdateByPK(ctx context.Context, sql updateQuery, m interface{
 	return m, err
 }
 
-func (s *baseImpl) scanRows(ctx context.Context, rows *dbsql.Rows) ([]interface{}, error) {
+func (s *baseImpl) BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, models interface{}, mp *constant.ModelParams) (r interface{}, err error) {
 	var (
-		models []interface{}
 		logger = log.WithCtx(ctx)
 	)
 
-	columns, err := rows.Columns()
+	sql = sql.Model(models).WherePK().Bulk()
+
+	if !mp.DisableCache {
+		sql.Returning("*")
+	} else {
+		sql.Returning("NULL")
+	}
+
+	_, err = sql.Exec(ctx)
 	if err != nil {
-		return models, err
+		logger.Error(err.Error(), zap.String("sql", sql.String()))
+		return nil, err
 	}
 
-	values := make([]interface{}, len(columns))
-	// Create a slice of pointers to those interfaces
-	scanArgs := make([]interface{}, len(columns))
-	for i := range values {
-		scanArgs[i] = &values[i]
+	if !mp.DisableCache {
+		go rd.HMSet(commontil.CopyContext(ctx), mp, models)
+	} else {
+		go rd.HMDel(ctx, mp, models)
 	}
 
-	for rows.Next() {
-		var (
-			m = map[string]interface{}{}
-		)
-
-		err = rows.Scan(scanArgs...)
-		if err != nil {
-			logger.Error(err.Error())
-			return nil, err
-		}
-
-		for i, col := range columns {
-			val := values[i]
-
-			// Handle null values
-			if val == nil {
-				models = append(models, nil)
-				continue
-			}
-
-			// The actual type will depend on your database driver
-			// Common types like string, int64, float64, bool, []byte will be returned
-			switch v := val.(type) {
-			case []byte:
-				// Convert []byte to string for readability
-				m[col] = string(v)
-			default:
-				m[col] = v
-			}
-		}
-
-		models = append(models, m)
-	}
-
-	return models, nil
+	return models, err
 }

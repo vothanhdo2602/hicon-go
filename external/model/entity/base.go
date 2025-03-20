@@ -3,8 +3,7 @@ package entity
 import (
 	"fmt"
 	"github.com/vothanhdo2602/hicon/external/config"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"reflect"
 	"strings"
 )
@@ -51,7 +50,7 @@ func GetSQLBucketKey(database string) string {
 }
 
 func GetValueByNameAsString(val reflect.Value, fieldName string) string {
-	field := val.FieldByName(cases.Title(language.English).String(fieldName))
+	field := val.FieldByName(pstring.Title(fieldName))
 	if !field.IsValid() {
 		return ""
 	}

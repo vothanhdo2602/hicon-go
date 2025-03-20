@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"github.com/vothanhdo2602/hicon/external/config"
-	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/grpctil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/internal/grpcapi"
-	"github.com/vothanhdo2602/hicon/internal/natsio/reqrep"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -29,29 +27,17 @@ func main() {
 
 	sqlexecutor.RegisterSQLExecutorServer(srv, grpcapi.SQLExecutor{})
 
-	//init workers
-	//wp := wkrtil.NewWorkerPool()
-	//defer wp.Stop()
-
-	// init nats
-	//err := natsio.Init(ctx, nil)
-	//if err != nil {
-	//	logger.Fatal(err.Error())
-	//}
-	//defer natsio.GracefulStop(ctx)
-
 	go func() {
 		UpsertConfiguration(ctx)
 
-		for i := 0; i < 10; i++ {
-			go FindAll(ctx)
-			//go BulkInsert(ctx)
-			//go FindByPK(ctx)
-			//go FindOne(ctx)
-			//go UpdateByPK(ctx)
-
-			//go FindByPKReqrep(ctx)
-		}
+		//for i := 0; i < 10; i++ {
+		go FindAll(ctx)
+		//go BulkInsert(ctx)
+		//go FindByPK(ctx)
+		//go FindOne(ctx)
+		//go UpdateByPK(ctx)
+		go BulkUpdateByPK(ctx)
+		//}
 	}()
 
 	l, err := net.Listen("tcp", addr)
@@ -128,13 +114,15 @@ func UpsertConfiguration(ctx context.Context) {
 func FindByPK(ctx context.Context) {
 	var (
 		req = &sqlexecutor.FindByPK{
-			Table: "users",
-			Data: map[string]*anypb.Any{
-				"id": grpcapi.InterfaceToAnyPb("67c567cd8b606b2293af1519"),
-			},
+			Table:  "users",
 			Select: []string{"id"},
 		}
 	)
+
+	data, _ := grpcapi.ConvertInterfaceToAny(map[string]interface{}{
+		"id": "67c567cd8b606b2293af1519",
+	})
+	req.Data = data
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
@@ -147,7 +135,7 @@ func FindByPK(ctx context.Context) {
 		return
 	}
 
-	fmt.Println("resp", resp.Data)
+	fmt.Println("resp", resp.Data, resp.Shared)
 }
 
 func FindOne(ctx context.Context) {
@@ -234,8 +222,8 @@ func BulkInsert(ctx context.Context) {
 		}
 	)
 
-	data := []map[string]interface{}{
-		{
+	data := []interface{}{
+		map[string]interface{}{
 			"id":   "67d299ad4244a581108b7ca5",
 			"type": "system",
 		},
@@ -289,23 +277,36 @@ func UpdateByPK(ctx context.Context) {
 	fmt.Println("resp", resp.Data)
 }
 
-func FindByPKReqrep(ctx context.Context) {
+func BulkUpdateByPK(ctx context.Context) {
 	var (
-		req = &requestmodel.FindByPK{
-			Table: "users",
-			Data: map[string]interface{}{
-				"id": "67c567cd8b606b2293af1519",
-			},
+		req = &sqlexecutor.BulkUpdateByPK{
+			Table:        "users",
+			DisableCache: false,
+			Set:          []string{"type"},
 		}
 	)
 
-	resp, err := reqrep.FindByPK(ctx, req)
+	data := []interface{}{
+		map[string]interface{}{
+			"id":   "67d299ad4244a581108b7da4",
+			"type": "system",
+			//"created_at": time.Now(),
+		},
+	}
+
+	dataConverted, _ := grpcapi.ConvertSliceAnyToPbAnySlice(data)
+	req.Data = dataConverted
+
+	conn, err := grpctil.NewClient()
+	if err != nil {
+		return
+	}
+
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkUpdateByPK(ctx, req)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	if resp.Data == nil {
-		fmt.Println("resp", resp.Data)
-	}
+	fmt.Println("resp", resp.Data)
 }

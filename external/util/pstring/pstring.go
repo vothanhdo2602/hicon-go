@@ -2,6 +2,8 @@ package pstring
 
 import (
 	"fmt"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	"strconv"
 )
 
@@ -30,4 +32,8 @@ func InterfaceToString(value interface{}) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
+}
+
+func Title(name string) string {
+	return cases.Title(language.English).String(name)
 }

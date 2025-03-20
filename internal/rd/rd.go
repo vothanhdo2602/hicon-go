@@ -12,9 +12,8 @@ import (
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
+	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"github.com/vothanhdo2602/hicon/internal/orm"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"reflect"
 	"sync"
 	"time"
@@ -70,28 +69,6 @@ func HSet(ctx context.Context, mp *constant.ModelParams, m interface{}) {
 	v, _ := json.Marshal(m)
 	pipe.HSet(ctx, key, pk, v)
 	pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
-
-	if _, err := pipe.Exec(ctx); err != nil {
-		logger.Error(err.Error())
-	}
-}
-
-func HMSet(ctx context.Context, mp *constant.ModelParams, data []interface{}) {
-	var (
-		logger = log.WithCtx(ctx)
-		pipe   = client.Pipeline()
-	)
-
-	if len(data) == 0 {
-		return
-	}
-
-	key := entity.GetEntityBucketKey(mp.Database, mp.Table)
-	for _, m := range data {
-		pk := entity.GetPK(mp.Table, m)
-		pipe.HSet(ctx, key, pk, m)
-		pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
-	}
 
 	if _, err := pipe.Exec(ctx); err != nil {
 		logger.Error(err.Error())
@@ -229,7 +206,6 @@ func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &models)
 
-	fmt.Println("@@@@@@@@", models)
 	if asserted, ok := models.(*[]interface{}); ok {
 		newModels := *asserted
 		wg.Add(len(newModels))
@@ -263,7 +239,7 @@ func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface
 
 	val := entity.GetReflectValue(m)
 	for _, c := range relCols {
-		fields := val.FieldByName(cases.Title(language.English).String(c.Name))
+		fields := val.FieldByName(pstring.Title(c.Name))
 		if !fields.IsValid() || fields.IsZero() {
 			continue
 		}
@@ -302,7 +278,7 @@ func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interfa
 	newVal := entity.GetReflectValue(newModel)
 	for _, c := range relCols {
 		var (
-			name      = cases.Title(language.English).String(c.Name)
+			name      = pstring.Title(c.Name)
 			fields    = val.FieldByName(name)
 			newFields = newVal.FieldByName(name)
 			newMP     = &constant.ModelParams{
@@ -345,4 +321,50 @@ func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interfa
 	//fmt.Println("MarshalIndent FulfillNestedModel", string(b))
 
 	return newModel
+}
+
+func HMSet(ctx context.Context, mp *constant.ModelParams, models interface{}) {
+	var (
+		logger = log.WithCtx(ctx)
+		pipe   = client.Pipeline()
+		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
+	)
+	if asserted, ok := models.(*[]interface{}); ok {
+		newModels := *asserted
+		for i := range newModels {
+			var (
+				pk = entity.GetPK(mp.Table, newModels[i])
+			)
+			newModelBytes, _ := json.Marshal(newModels[i])
+			pipe.HSet(ctx, key, pk, newModelBytes)
+			pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
+			CacheNestedModel(ctx, mp, newModels[i], pipe)
+		}
+	}
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		logger.Error(err.Error())
+	}
+}
+
+func HMDel(ctx context.Context, mp *constant.ModelParams, models interface{}) {
+	var (
+		logger = log.WithCtx(ctx)
+		pipe   = client.Pipeline()
+		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
+		PKs    []string
+	)
+	if asserted, ok := models.(*[]interface{}); ok {
+		newModels := *asserted
+		for i := range newModels {
+			PKs = append(PKs, entity.GetPK(mp.Table, newModels[i]))
+		}
+	}
+
+	pipe.HDel(ctx, key, PKs...)
+	_, err := pipe.HDel(ctx, key, PKs...).Result()
+	if err != nil {
+		logger.Error(err.Error())
+	}
 }

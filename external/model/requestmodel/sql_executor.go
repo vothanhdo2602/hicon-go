@@ -81,7 +81,7 @@ type FindByPK struct {
 	Table        string
 	DisableCache bool
 	Select       []string
-	Data         map[string]interface{}
+	Data         interface{}
 }
 
 func (m *FindByPK) Validate() error {
@@ -183,6 +183,15 @@ type BulkUpdateByPK struct {
 	//The later task will not execute and get the result from the first task with the same lock key in the same time
 	LockKey      string
 	Table        string
+	Set          []string
 	Data         []interface{}
 	DisableCache bool
+}
+
+func (m *BulkUpdateByPK) Validate() error {
+	return validation.ValidateStruct(
+		m,
+		validation.Field(&m.Table, validation.Required),
+		validation.Field(&m.Data, validation.Required),
+	)
 }
