@@ -252,7 +252,7 @@ func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m inter
 	if !mp.DisableCache {
 		go rd.HSet(commontil.CopyContext(ctx), mp, m)
 	} else {
-		go rd.HDel(ctx, mp, m)
+		go rd.HDel(commontil.CopyContext(ctx), mp, m)
 	}
 
 	return m, err
@@ -280,7 +280,7 @@ func (s *baseImpl) BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, mod
 	if !mp.DisableCache {
 		go rd.HMSet(commontil.CopyContext(ctx), mp, models)
 	} else {
-		go rd.HMDel(ctx, mp, models)
+		go rd.HMDel(commontil.CopyContext(ctx), mp, models)
 	}
 
 	return models, err
