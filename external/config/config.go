@@ -6,26 +6,19 @@ import (
 	"github.com/goccy/go-json"
 	"reflect"
 	"strings"
-	"time"
 )
 
 type ENV struct {
-	DB struct {
-		DBConfiguration *DBConfiguration
-		Redis           *Redis
-		Nats            struct {
-			URL            string
-			User           string
-			Password       string
-			TLS            *TLS
-			RequestTimeout time.Duration
-			StreamName     string
-		}
-	}
+	DB     DB
 	Common struct {
 		Host string
 		Port int
 	}
+}
+
+type DB struct {
+	DBConfiguration *DBConfiguration
+	Redis           *Redis
 }
 
 type Redis struct {
@@ -58,6 +51,10 @@ func GetENV() ENV {
 	return env
 }
 
+func (s ENV) GetDB() DB {
+	return s.DB
+}
+
 func SetDBConfiguration(cfg *DBConfiguration) {
 	env.DB.DBConfiguration = cfg
 }
@@ -74,7 +71,7 @@ func ConfigurationUpdated() error {
 }
 
 func GetModelRegistry() *ModelRegistry {
-	return env.DB.DBConfiguration.ModelRegistry
+	return GetENV().GetDB().DBConfiguration.ModelRegistry
 }
 
 func (s *ModelRegistry) GetNewModel(name string) interface{} {
