@@ -98,6 +98,10 @@ func HGet(ctx context.Context, mp *constant.ModelParams, m interface{}) interfac
 }
 
 func HDel(ctx context.Context, mp *constant.ModelParams, m interface{}) {
+	if client == nil {
+		return
+	}
+
 	var (
 		logger = log.WithCtx(ctx)
 		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
@@ -349,6 +353,10 @@ func HMSet(ctx context.Context, mp *constant.ModelParams, models interface{}) {
 }
 
 func HMDel(ctx context.Context, mp *constant.ModelParams, models interface{}) {
+	if client == nil {
+		return
+	}
+
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()

@@ -18,11 +18,11 @@ func main() {
 	var (
 		ctx    = context.Background()
 		logger = log.WithCtx(ctx)
-		srv    = grpc.NewServer(grpc.MaxConcurrentStreams(0))
+		srv    = grpc.NewServer()
 		addr   = config.GetAddr()
 	)
 
-	sqlexecutor.RegisterSQLExecutorServer(srv, grpcapi.SQLExecutor{})
+	sqlexecutor.RegisterSQLExecutorServer(srv, &grpcapi.SQLExecutor{})
 
 	go func() {
 		UpsertConfiguration(ctx)
