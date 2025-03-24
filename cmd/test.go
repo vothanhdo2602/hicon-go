@@ -243,6 +243,9 @@ func UpdateAll(ctx context.Context) {
 			Where: []*sqlexecutor.QueryWithArgs{
 				{Query: "id = ?", Args: []*anypb.Any{id}},
 			},
+			Set: []*sqlexecutor.QueryWithArgs{
+				{Query: "id = ?", Args: []*anypb.Any{id}},
+			},
 		}
 	)
 

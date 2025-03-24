@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
@@ -134,10 +133,7 @@ func (s *sqlExecutorImpl) updateAll(ctx context.Context, tx bun.IDB, req *reques
 			sql.WhereAllWithDeleted()
 		}
 
-		m, err := config.TransformModel(req.Table, nil, req.Data, config.PtrModelType)
-		if err != nil {
-			return nil, err
-		}
+		m := config.GetModelRegistry().GetNewModel(req.Table)
 
 		return d.UpdateAll(ctx, sql, m, mp)
 	}
