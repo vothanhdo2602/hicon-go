@@ -72,3 +72,17 @@ func GetValueByNameAsString(val reflect.Value, fieldName string) string {
 		return ""
 	}
 }
+
+func IsZeroValueField(v interface{}, fieldName string) bool {
+	val := GetReflectValue(v)
+	if val.IsZero() {
+		return true
+	}
+
+	field := val.FieldByName(pstring.Title(fieldName))
+	if field.IsZero() {
+		return true
+	}
+
+	return false
+}

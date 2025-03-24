@@ -5,6 +5,7 @@ import (
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
+	"github.com/vothanhdo2602/hicon/external/util/grpctil"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/pkg/service"
 )
@@ -17,7 +18,7 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 	defer commontil.Recover(ctx)
 
 	if data.DbConfiguration == nil {
-		return NewResponse(responsemodel.R400("field DbConfiguration is required")), nil
+		return grpctil.NewResponse(responsemodel.R400("field DbConfiguration is required")), nil
 	}
 
 	var (
@@ -88,7 +89,7 @@ func (SQLExecutor) UpsertConfiguration(ctx context.Context, data *sqlexecutor.Up
 
 	r := svc.UpsertConfiguration(ctx, req)
 
-	return NewResponse(r), nil
+	return grpctil.NewResponse(r), nil
 }
 
 func (SQLExecutor) FindByPK(ctx context.Context, data *sqlexecutor.FindByPK) (*sqlexecutor.BaseResponse, error) {
@@ -103,12 +104,12 @@ func (SQLExecutor) FindByPK(ctx context.Context, data *sqlexecutor.FindByPK) (*s
 		svc = service.SQLExecutor()
 	)
 
-	d, _ := ConvertPbAnyToInterface(data.Data)
+	d, _ := grpctil.ConvertPbAnyToInterface(data.Data)
 	req.Data = d
 
 	resp := svc.FindByPK(ctx, req)
 
-	return NewResponse(resp), nil
+	return grpctil.NewResponse(resp), nil
 }
 
 func (SQLExecutor) FindOne(ctx context.Context, data *sqlexecutor.FindOne) (*sqlexecutor.BaseResponse, error) {
@@ -125,14 +126,12 @@ func (SQLExecutor) FindOne(ctx context.Context, data *sqlexecutor.FindOne) (*sql
 		svc = service.SQLExecutor()
 	)
 
-	for _, protoWhere := range data.Where {
-		w, err := ConvertWhereProtoToGo(protoWhere)
-		if err != nil {
-			return NewResponse(responsemodel.R400(err.Error())), nil
-		}
-
-		req.Where = append(req.Where, w)
+	w, err := grpctil.ConvertSliceQueryWithArgsProtoToRequestModel(data.Where)
+	if err != nil {
+		return nil, err
 	}
+
+	req.Where = w
 
 	for _, rel := range data.Relations {
 		req.Relations = append(req.Relations, rel)
@@ -140,7 +139,7 @@ func (SQLExecutor) FindOne(ctx context.Context, data *sqlexecutor.FindOne) (*sql
 
 	resp := svc.FindOne(ctx, req)
 
-	return NewResponse(resp), nil
+	return grpctil.NewResponse(resp), nil
 }
 
 func (SQLExecutor) FindAll(ctx context.Context, data *sqlexecutor.FindAll) (*sqlexecutor.BaseResponse, error) {
@@ -157,14 +156,12 @@ func (SQLExecutor) FindAll(ctx context.Context, data *sqlexecutor.FindAll) (*sql
 		svc = service.SQLExecutor()
 	)
 
-	for _, protoWhere := range data.Where {
-		w, err := ConvertWhereProtoToGo(protoWhere)
-		if err != nil {
-			return NewResponse(responsemodel.R400(err.Error())), nil
-		}
-
-		req.Where = append(req.Where, w)
+	w, err := grpctil.ConvertSliceQueryWithArgsProtoToRequestModel(data.Where)
+	if err != nil {
+		return nil, err
 	}
+
+	req.Where = w
 
 	for _, rel := range data.Relations {
 		req.Relations = append(req.Relations, rel)
@@ -176,7 +173,7 @@ func (SQLExecutor) FindAll(ctx context.Context, data *sqlexecutor.FindAll) (*sql
 		}
 
 		for _, arg := range rel.Args {
-			val, _ := ConvertPbAnyToInterface(arg)
+			val, _ := grpctil.ConvertPbAnyToInterface(arg)
 			j.Args = append(j.Args, val)
 		}
 
@@ -185,7 +182,7 @@ func (SQLExecutor) FindAll(ctx context.Context, data *sqlexecutor.FindAll) (*sql
 
 	resp := svc.FindAll(ctx, req)
 
-	return NewResponse(resp), nil
+	return grpctil.NewResponse(resp), nil
 }
 
 func (SQLExecutor) Exec(ctx context.Context, data *sqlexecutor.Exec) (*sqlexecutor.BaseResponse, error) {
@@ -200,13 +197,13 @@ func (SQLExecutor) Exec(ctx context.Context, data *sqlexecutor.Exec) (*sqlexecut
 	)
 
 	for _, arg := range data.Args {
-		val, _ := ConvertPbAnyToInterface(arg)
+		val, _ := grpctil.ConvertPbAnyToInterface(arg)
 		req.Args = append(req.Args, val)
 	}
 
 	resp := svc.Exec(ctx, req)
 
-	return NewResponse(resp), nil
+	return grpctil.NewResponse(resp), nil
 }
 
 func (SQLExecutor) BulkInsert(ctx context.Context, data *sqlexecutor.BulkInsert) (*sqlexecutor.BaseResponse, error) {
@@ -221,7 +218,7 @@ func (SQLExecutor) BulkInsert(ctx context.Context, data *sqlexecutor.BulkInsert)
 		svc = service.SQLExecutor()
 	)
 
-	r, err := ConvertSlicePbAnyToSliceInterface(data.Data)
+	r, err := grpctil.ConvertSlicePbAnyToSliceInterface(data.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +226,7 @@ func (SQLExecutor) BulkInsert(ctx context.Context, data *sqlexecutor.BulkInsert)
 
 	resp := svc.BulkInsert(ctx, req)
 
-	return NewResponse(resp), nil
+	return grpctil.NewResponse(resp), nil
 }
 
 func (SQLExecutor) UpdateByPK(ctx context.Context, data *sqlexecutor.UpdateByPK) (*sqlexecutor.BaseResponse, error) {
@@ -244,7 +241,13 @@ func (SQLExecutor) UpdateByPK(ctx context.Context, data *sqlexecutor.UpdateByPK)
 		svc = service.SQLExecutor()
 	)
 
-	r, err := ConvertPbAnyToInterface(data.Data)
+	w, err := grpctil.ConvertSliceQueryWithArgsProtoToRequestModel(data.Where)
+	if err != nil {
+		return nil, err
+	}
+	req.Where = w
+
+	r, err := grpctil.ConvertPbAnyToInterface(data.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +255,42 @@ func (SQLExecutor) UpdateByPK(ctx context.Context, data *sqlexecutor.UpdateByPK)
 
 	resp := svc.UpdateByPK(ctx, req)
 
-	return NewResponse(resp), nil
+	return grpctil.NewResponse(resp), nil
+}
+
+func (SQLExecutor) UpdateAll(ctx context.Context, data *sqlexecutor.UpdateAll) (*sqlexecutor.BaseResponse, error) {
+	defer commontil.Recover(ctx)
+
+	var (
+		req = &requestmodel.UpdateAll{
+			LockKey:      data.LockKey,
+			Table:        data.Table,
+			DisableCache: data.DisableCache,
+		}
+		svc = service.SQLExecutor()
+	)
+
+	w, err := grpctil.ConvertSliceQueryWithArgsProtoToRequestModel(data.Where)
+	if err != nil {
+		return nil, err
+	}
+	req.Where = w
+
+	s, err := grpctil.ConvertSliceQueryWithArgsProtoToRequestModel(data.Set)
+	if err != nil {
+		return nil, err
+	}
+	req.Set = s
+
+	r, err := grpctil.ConvertPbAnyToInterface(data.Data)
+	if err != nil {
+		return nil, err
+	}
+	req.Data = r
+
+	resp := svc.UpdateAll(ctx, req)
+
+	return grpctil.NewResponse(resp), nil
 }
 
 func (SQLExecutor) BulkUpdateByPK(ctx context.Context, data *sqlexecutor.BulkUpdateByPK) (*sqlexecutor.BaseResponse, error) {
@@ -268,7 +306,7 @@ func (SQLExecutor) BulkUpdateByPK(ctx context.Context, data *sqlexecutor.BulkUpd
 		svc = service.SQLExecutor()
 	)
 
-	r, err := ConvertSlicePbAnyToSliceInterface(data.Data)
+	r, err := grpctil.ConvertSlicePbAnyToSliceInterface(data.Data)
 	if err != nil {
 		return nil, err
 	}
@@ -276,5 +314,60 @@ func (SQLExecutor) BulkUpdateByPK(ctx context.Context, data *sqlexecutor.BulkUpd
 
 	resp := svc.BulkUpdateByPK(ctx, req)
 
-	return NewResponse(resp), nil
+	return grpctil.NewResponse(resp), nil
+}
+
+func (SQLExecutor) DeleteByPK(ctx context.Context, data *sqlexecutor.DeleteByPK) (*sqlexecutor.BaseResponse, error) {
+	defer commontil.Recover(ctx)
+
+	var (
+		req = &requestmodel.DeleteByPK{
+			LockKey:      data.LockKey,
+			Table:        data.Table,
+			DisableCache: data.DisableCache,
+		}
+		svc = service.SQLExecutor()
+	)
+
+	w, err := grpctil.ConvertSliceQueryWithArgsProtoToRequestModel(data.Where)
+	if err != nil {
+		return nil, err
+	}
+	req.Where = w
+
+	r, err := grpctil.ConvertPbAnyToInterface(data.Data)
+	if err != nil {
+		return nil, err
+	}
+	req.Data = r
+
+	resp := svc.DeleteByPK(ctx, req)
+
+	return grpctil.NewResponse(resp), nil
+}
+
+func (SQLExecutor) BulkWriteWithTx(ctx context.Context, data *sqlexecutor.BulkWriteWithTx) (*sqlexecutor.BaseResponse, error) {
+	defer commontil.Recover(ctx)
+
+	var (
+		req = &requestmodel.BulkWriteWithTx{
+			LockKey: data.LockKey,
+		}
+		svc = service.SQLExecutor()
+	)
+
+	for _, o := range data.Operations {
+		operation := &requestmodel.Operation{
+			Name: o.Name,
+		}
+		r, err := grpctil.ConvertPbAnyToInterface(o.Data)
+		if err != nil {
+			return nil, err
+		}
+		operation.Data = r
+		req.Operations = append(req.Operations, operation)
+	}
+	resp := svc.BulkWriteWithTx(ctx, req)
+
+	return grpctil.NewResponse(resp), nil
 }

@@ -1,7 +1,7 @@
 export ENV=development
 
 server:
-	go run cmd/main.go
+	go run cmd/*
 
 run-services:
 	docker compose -f deployment/docker/docker-compose.yaml up -d

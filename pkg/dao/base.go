@@ -8,6 +8,7 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
+	"github.com/vothanhdo2602/hicon/external/model/entity"
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
@@ -18,13 +19,33 @@ import (
 )
 
 const (
-	FindByPKAction = "find_by_primary_keys_action"
-	FindAllAction  = "find_all_action"
-	CustomLockKey  = "custom_lock_key_action"
+	FindByPKAction         = "find_by_primary"
+	FindAllAction          = "find_all_action"
+	CustomLockKey          = "custom_lock"
+	BulkInsertLockKey      = "bulk_insert"
+	UpdateByPKLockKey      = "update_by_pk"
+	BulkUpdateByPKLockKey  = "bulk_update_by_pk"
+	BulkWriteWithTxLockKey = "bulk_write_with_tx"
 )
 
 func GetCustomLockKey(lockKey string) string {
 	return fmt.Sprintf("%s:%s", CustomLockKey, lockKey)
+}
+
+func GetBulkInsertLockKey(lockKey string) string {
+	return fmt.Sprintf("%s:%s", BulkInsertLockKey, lockKey)
+}
+
+func GetUpdateByPKLockKey(lockKey string) string {
+	return fmt.Sprintf("%s:%s", UpdateByPKLockKey, lockKey)
+}
+
+func GetBulkUpdateByPKLockKey(lockKey string) string {
+	return fmt.Sprintf("%s:%s", BulkUpdateByPKLockKey, lockKey)
+}
+
+func GetBulkWriteWithTxLockKey(lockKey string) string {
+	return fmt.Sprintf("%s:%s", BulkWriteWithTxLockKey, lockKey)
 }
 
 type dbInterface interface {
@@ -38,9 +59,11 @@ type BaseInterface interface {
 	FindOne(ctx context.Context, sql dbInterface, model interface{}, mp *constant.ModelParams, values ...any) (m interface{}, err error, shared bool)
 	FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool)
 	Exec(ctx context.Context, stringSQL, lockKey string, args ...any) (interface{}, error, bool)
-	BulkInsert(ctx context.Context, models interface{}, mp *constant.ModelParams) (m interface{}, err error)
+	BulkInsert(ctx context.Context, db bun.IDB, models interface{}, mp *constant.ModelParams) (m interface{}, err error)
 	UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
+	UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
 	BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
+	DeleteByPK(ctx context.Context, sql *bun.DeleteQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
 }
 
 type baseImpl struct {
@@ -58,6 +81,17 @@ func (s *baseImpl) FindByPK(ctx context.Context, m interface{}, id string, mp *c
 		return s.findByPK(ctx, newModel, mp)
 	})
 
+	if v != nil && !mp.WhereAllWithDeleted {
+		var (
+			cols = config.GetModelRegistry().GetTableConfiguration(mp.Table).SoftDeleteColumns
+		)
+		for _, c := range cols {
+			if !entity.IsZeroValueField(v, c) {
+				return nil, err, shared
+			}
+		}
+	}
+
 	return v, err, shared
 }
 
@@ -69,13 +103,13 @@ func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *constant.Mod
 	)
 
 	if !mp.DisableCache {
-		cacheModel := rd.HGet(ctx, mp, m)
-		if cacheModel != nil {
-			return cacheModel, nil
+		cachedModel := rd.HGet(ctx, mp, m)
+		if cachedModel != nil {
+			return cachedModel, nil
 		}
 	}
 
-	err := sql.WherePK().Scan(ctx)
+	err := sql.WherePK().WhereDeleted().Scan(ctx)
 	if err != nil {
 		if errors.Is(err, dbsql.ErrNoRows) {
 			return nil, nil
@@ -86,7 +120,7 @@ func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *constant.Mod
 	}
 
 	if !mp.DisableCache {
-		rd.HSet(ctx, mp, m)
+		go rd.HSet(commontil.CopyContext(ctx), mp, m)
 	}
 	return m, nil
 }
@@ -103,9 +137,9 @@ func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interfac
 		)
 
 		if !mp.DisableCache {
-			cacheModel := rd.HGetAllSQL(ctx, mp, sqlStr, models, s.FindByPK)
-			if cacheModel != nil {
-				return cacheModel, nil
+			cachedModel := rd.HGetAllSQL(ctx, mp, sqlStr, models, s.FindByPK)
+			if cachedModel != nil {
+				return cachedModel, nil
 			}
 		}
 
@@ -120,7 +154,7 @@ func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interfac
 		}
 
 		if !mp.DisableCache {
-			rd.HSetAllSQL(ctx, mp, sqlStr, models)
+			go rd.HSetAllSQL(commontil.CopyContext(ctx), mp, sqlStr, models)
 		}
 
 		return models, nil
@@ -145,9 +179,9 @@ func (s *baseImpl) FindOne(ctx context.Context, sql dbInterface, m interface{}, 
 		)
 
 		if !mp.DisableCache {
-			cacheModel := rd.HGetSQL(ctx, mp, sqlStr, m, s.FindByPK)
-			if cacheModel != nil {
-				return cacheModel, nil
+			cachedModel := rd.HGetSQL(ctx, mp, sqlStr, m, s.FindByPK)
+			if cachedModel != nil {
+				return cachedModel, nil
 			}
 		}
 
@@ -162,7 +196,7 @@ func (s *baseImpl) FindOne(ctx context.Context, sql dbInterface, m interface{}, 
 		}
 
 		if !mp.DisableCache {
-			rd.HSetSQL(ctx, mp, sqlStr, m)
+			go rd.HSetSQL(commontil.CopyContext(ctx), mp, sqlStr, m)
 		}
 
 		return &m, err
@@ -208,9 +242,8 @@ func (s *baseImpl) Exec(ctx context.Context, stringSQL, lockKey string, args ...
 	return s.g.Do(sqlKey, fn)
 }
 
-func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, mp *constant.ModelParams) (m interface{}, err error) {
+func (s *baseImpl) BulkInsert(ctx context.Context, db bun.IDB, models interface{}, mp *constant.ModelParams) (m interface{}, err error) {
 	var (
-		db     = orm.GetDB()
 		logger = log.WithCtx(ctx)
 		sql    = db.NewInsert().Model(models)
 	)
@@ -233,9 +266,10 @@ func (s *baseImpl) BulkInsert(ctx context.Context, models interface{}, mp *const
 func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
+		bgCtx  = commontil.CopyContext(ctx)
 	)
 
-	sql = sql.Model(m).WherePK().OmitZero().Returning("*")
+	sql = sql.Model(m).WherePK().WhereDeleted().OmitZero()
 
 	if !mp.DisableCache {
 		sql.Returning("*")
@@ -250,9 +284,67 @@ func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m inter
 	}
 
 	if !mp.DisableCache {
-		go rd.HSet(commontil.CopyContext(ctx), mp, m)
+		go rd.HSet(bgCtx, mp, m)
 	} else {
-		go rd.HDel(commontil.CopyContext(ctx), mp, m)
+		go rd.HDel(bgCtx, mp, m)
+	}
+
+	return m, err
+}
+
+func (s *baseImpl) UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+	var (
+		logger = log.WithCtx(ctx)
+		bgCtx  = commontil.CopyContext(ctx)
+	)
+
+	sql = sql.Model(m).WhereDeleted().OmitZero()
+
+	if !mp.DisableCache {
+		sql.Returning("*")
+	} else {
+		sql.Returning("NULL")
+	}
+
+	_, err = sql.Exec(ctx)
+	if err != nil {
+		logger.Error(err.Error(), zap.String("sql", sql.String()))
+		return nil, err
+	}
+
+	if !mp.DisableCache {
+		go rd.HSet(bgCtx, mp, m)
+	} else {
+		go rd.HDel(bgCtx, mp, m)
+	}
+
+	return m, err
+}
+
+func (s *baseImpl) DeleteByPK(ctx context.Context, sql *bun.DeleteQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+	var (
+		logger = log.WithCtx(ctx)
+		bgCtx  = commontil.CopyContext(ctx)
+	)
+
+	sql = sql.Model(m).WherePK()
+
+	if !mp.DisableCache {
+		sql.Returning("*")
+	} else {
+		sql.Returning("NULL")
+	}
+
+	_, err = sql.Exec(ctx)
+	if err != nil {
+		logger.Error(err.Error(), zap.String("sql", sql.String()))
+		return nil, err
+	}
+
+	if !mp.DisableCache {
+		go rd.HSet(bgCtx, mp, m)
+	} else {
+		go rd.HDel(bgCtx, mp, m)
 	}
 
 	return m, err
@@ -261,6 +353,7 @@ func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m inter
 func (s *baseImpl) BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, models interface{}, mp *constant.ModelParams) (r interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
+		bgCtx  = commontil.CopyContext(ctx)
 	)
 
 	sql = sql.Model(models).WherePK().Bulk()
@@ -278,9 +371,9 @@ func (s *baseImpl) BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, mod
 	}
 
 	if !mp.DisableCache {
-		go rd.HMSet(commontil.CopyContext(ctx), mp, models)
+		go rd.HMSet(bgCtx, mp, models)
 	} else {
-		go rd.HMDel(commontil.CopyContext(ctx), mp, models)
+		go rd.HMDel(bgCtx, mp, models)
 	}
 
 	return models, err

@@ -55,6 +55,10 @@ func (s ENV) GetDB() DB {
 	return s.DB
 }
 
+func (s DB) GetDBConfiguration() *DBConfiguration {
+	return GetENV().GetDB().DBConfiguration
+}
+
 func SetDBConfiguration(cfg *DBConfiguration) {
 	env.DB.DBConfiguration = cfg
 }
@@ -163,5 +167,5 @@ func TransformModels(table string, fields []string, data interface{}, modelType 
 }
 
 func (s *DBConfiguration) GetDatabaseName() string {
-	return env.DB.DBConfiguration.Database
+	return GetENV().GetDB().GetDBConfiguration().Database
 }

@@ -1,4 +1,4 @@
-package grpcapi
+package grpctil
 
 import (
 	"github.com/goccy/go-json"
@@ -43,7 +43,7 @@ func AnyMapToInterfaceMap(anyMap map[string]*anypb.Any) map[string]interface{} {
 	return result
 }
 
-func ConvertInterfaceToAny(v interface{}) (*anypb.Any, error) {
+func ConvertInterfaceToPbAny(v interface{}) (*anypb.Any, error) {
 	anyValue := &anypb.Any{}
 	bytes, _ := json.Marshal(v)
 	bytesValue := &wrappers.BytesValue{
@@ -57,7 +57,7 @@ func ConvertSliceAnyToPbAnySlice(input []interface{}) ([]*anypb.Any, error) {
 	result := make([]*anypb.Any, 0, len(input))
 
 	for _, item := range input {
-		d, err := ConvertInterfaceToAny(item)
+		d, err := ConvertInterfaceToPbAny(item)
 		if err != nil {
 			return nil, err
 		}
@@ -94,12 +94,12 @@ func ConvertSlicePbAnyToSliceInterface(anyValue []*anypb.Any) ([]interface{}, er
 	return values, nil
 }
 
-func ConvertWhereProtoToGo(protoWhere *sqlexecutor.Where) (*requestmodel.Where, error) {
+func ConvertQueryWithArgsProtoToRequestModel(protoWhere *sqlexecutor.QueryWithArgs) (*requestmodel.QueryWithArgs, error) {
 	if protoWhere == nil {
 		return nil, nil
 	}
 
-	whereGo := &requestmodel.Where{
+	whereGo := &requestmodel.QueryWithArgs{
 		Query: protoWhere.Query,
 		Args:  make([]interface{}, 0, len(protoWhere.Args)),
 	}
@@ -110,4 +110,32 @@ func ConvertWhereProtoToGo(protoWhere *sqlexecutor.Where) (*requestmodel.Where, 
 	}
 
 	return whereGo, nil
+}
+
+func ConvertSliceQueryWithArgsProtoToRequestModel(protoWhere []*sqlexecutor.QueryWithArgs) ([]*requestmodel.QueryWithArgs, error) {
+	var r []*requestmodel.QueryWithArgs
+	for _, w := range protoWhere {
+		newWhere, err := ConvertQueryWithArgsProtoToRequestModel(w)
+		if err != nil {
+			return nil, err
+		}
+
+		r = append(r, newWhere)
+	}
+
+	return r, nil
+}
+
+func ConvertPbAnyToInterfaceWithType[T any](anyValue *anypb.Any) (T, error) {
+	var value T
+	bytesValue := &wrappers.BytesValue{}
+	err := anypb.UnmarshalTo(anyValue, bytesValue, proto.UnmarshalOptions{})
+	if err != nil {
+		return value, err
+	}
+	uErr := json.Unmarshal(bytesValue.Value, &value)
+	if uErr != nil {
+		return value, uErr
+	}
+	return value, nil
 }

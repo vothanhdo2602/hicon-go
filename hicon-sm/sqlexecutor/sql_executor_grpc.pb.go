@@ -26,7 +26,10 @@ const (
 	SQLExecutor_Exec_FullMethodName                = "/SQLExecutor/Exec"
 	SQLExecutor_BulkInsert_FullMethodName          = "/SQLExecutor/BulkInsert"
 	SQLExecutor_UpdateByPK_FullMethodName          = "/SQLExecutor/UpdateByPK"
+	SQLExecutor_UpdateAll_FullMethodName           = "/SQLExecutor/UpdateAll"
 	SQLExecutor_BulkUpdateByPK_FullMethodName      = "/SQLExecutor/BulkUpdateByPK"
+	SQLExecutor_DeleteByPK_FullMethodName          = "/SQLExecutor/DeleteByPK"
+	SQLExecutor_BulkWriteWithTx_FullMethodName     = "/SQLExecutor/BulkWriteWithTx"
 )
 
 // SQLExecutorClient is the client API for SQLExecutor service.
@@ -40,7 +43,10 @@ type SQLExecutorClient interface {
 	Exec(ctx context.Context, in *Exec, opts ...grpc.CallOption) (*BaseResponse, error)
 	BulkInsert(ctx context.Context, in *BulkInsert, opts ...grpc.CallOption) (*BaseResponse, error)
 	UpdateByPK(ctx context.Context, in *UpdateByPK, opts ...grpc.CallOption) (*BaseResponse, error)
+	UpdateAll(ctx context.Context, in *UpdateAll, opts ...grpc.CallOption) (*BaseResponse, error)
 	BulkUpdateByPK(ctx context.Context, in *BulkUpdateByPK, opts ...grpc.CallOption) (*BaseResponse, error)
+	DeleteByPK(ctx context.Context, in *DeleteByPK, opts ...grpc.CallOption) (*BaseResponse, error)
+	BulkWriteWithTx(ctx context.Context, in *BulkWriteWithTx, opts ...grpc.CallOption) (*BaseResponse, error)
 }
 
 type sQLExecutorClient struct {
@@ -121,10 +127,40 @@ func (c *sQLExecutorClient) UpdateByPK(ctx context.Context, in *UpdateByPK, opts
 	return out, nil
 }
 
+func (c *sQLExecutorClient) UpdateAll(ctx context.Context, in *UpdateAll, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_UpdateAll_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sQLExecutorClient) BulkUpdateByPK(ctx context.Context, in *BulkUpdateByPK, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_BulkUpdateByPK_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sQLExecutorClient) DeleteByPK(ctx context.Context, in *DeleteByPK, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_DeleteByPK_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sQLExecutorClient) BulkWriteWithTx(ctx context.Context, in *BulkWriteWithTx, opts ...grpc.CallOption) (*BaseResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BaseResponse)
+	err := c.cc.Invoke(ctx, SQLExecutor_BulkWriteWithTx_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -142,7 +178,10 @@ type SQLExecutorServer interface {
 	Exec(context.Context, *Exec) (*BaseResponse, error)
 	BulkInsert(context.Context, *BulkInsert) (*BaseResponse, error)
 	UpdateByPK(context.Context, *UpdateByPK) (*BaseResponse, error)
+	UpdateAll(context.Context, *UpdateAll) (*BaseResponse, error)
 	BulkUpdateByPK(context.Context, *BulkUpdateByPK) (*BaseResponse, error)
+	DeleteByPK(context.Context, *DeleteByPK) (*BaseResponse, error)
+	BulkWriteWithTx(context.Context, *BulkWriteWithTx) (*BaseResponse, error)
 	mustEmbedUnimplementedSQLExecutorServer()
 }
 
@@ -174,8 +213,17 @@ func (UnimplementedSQLExecutorServer) BulkInsert(context.Context, *BulkInsert) (
 func (UnimplementedSQLExecutorServer) UpdateByPK(context.Context, *UpdateByPK) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateByPK not implemented")
 }
+func (UnimplementedSQLExecutorServer) UpdateAll(context.Context, *UpdateAll) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateAll not implemented")
+}
 func (UnimplementedSQLExecutorServer) BulkUpdateByPK(context.Context, *BulkUpdateByPK) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdateByPK not implemented")
+}
+func (UnimplementedSQLExecutorServer) DeleteByPK(context.Context, *DeleteByPK) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteByPK not implemented")
+}
+func (UnimplementedSQLExecutorServer) BulkWriteWithTx(context.Context, *BulkWriteWithTx) (*BaseResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BulkWriteWithTx not implemented")
 }
 func (UnimplementedSQLExecutorServer) mustEmbedUnimplementedSQLExecutorServer() {}
 func (UnimplementedSQLExecutorServer) testEmbeddedByValue()                     {}
@@ -324,6 +372,24 @@ func _SQLExecutor_UpdateByPK_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SQLExecutor_UpdateAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateAll)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).UpdateAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_UpdateAll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).UpdateAll(ctx, req.(*UpdateAll))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SQLExecutor_BulkUpdateByPK_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(BulkUpdateByPK)
 	if err := dec(in); err != nil {
@@ -338,6 +404,42 @@ func _SQLExecutor_BulkUpdateByPK_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SQLExecutorServer).BulkUpdateByPK(ctx, req.(*BulkUpdateByPK))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SQLExecutor_DeleteByPK_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteByPK)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).DeleteByPK(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_DeleteByPK_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).DeleteByPK(ctx, req.(*DeleteByPK))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SQLExecutor_BulkWriteWithTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BulkWriteWithTx)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SQLExecutorServer).BulkWriteWithTx(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SQLExecutor_BulkWriteWithTx_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SQLExecutorServer).BulkWriteWithTx(ctx, req.(*BulkWriteWithTx))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -378,8 +480,20 @@ var SQLExecutor_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SQLExecutor_UpdateByPK_Handler,
 		},
 		{
+			MethodName: "UpdateAll",
+			Handler:    _SQLExecutor_UpdateAll_Handler,
+		},
+		{
 			MethodName: "BulkUpdateByPK",
 			Handler:    _SQLExecutor_BulkUpdateByPK_Handler,
+		},
+		{
+			MethodName: "DeleteByPK",
+			Handler:    _SQLExecutor_DeleteByPK_Handler,
+		},
+		{
+			MethodName: "BulkWriteWithTx",
+			Handler:    _SQLExecutor_BulkWriteWithTx_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

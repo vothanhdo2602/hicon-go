@@ -3,6 +3,7 @@ package pjson
 import (
 	"context"
 	"github.com/goccy/go-json"
+	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 )
 
@@ -21,4 +22,17 @@ func Unmarshal(ctx context.Context, data []byte, output interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func ConvertWithType[T any](data interface{}) (T, error) {
+	var r T
+	b, err := json.Marshal(data)
+	if err != nil {
+		return r, constant.ErrorContactMaintainer(err)
+	}
+	err = json.Unmarshal(b, &r)
+	if err != nil {
+		return r, constant.ErrorContactMaintainer(err)
+	}
+	return r, nil
 }

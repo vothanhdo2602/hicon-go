@@ -78,7 +78,7 @@ message UpsertConfiguration {
   Redis redis = 5;
 }
 
-message Where {
+message QueryWithArgs {
   string query = 1;
   repeated google.protobuf.Any args = 2;
 }
@@ -93,30 +93,33 @@ message FindByPK {
   bool disable_cache = 2;
   google.protobuf.Any data = 3;
   repeated string select = 4;
+  bool where_all_with_deleted = 5;
 }
 
 message FindOne {
   string table = 1;
   bool disable_cache = 2;
   repeated string select = 3;
-  repeated Where where = 4;
+  repeated QueryWithArgs where = 4;
   repeated string relations = 5;
   repeated Join joins = 6;
   int64 offset = 7;
   int64 limit = 8;
   repeated string order_by = 9;
+  bool where_all_with_deleted = 10;
 }
 
 message FindAll {
   string table = 1;
   bool disable_cache = 2;
   repeated string select = 3;
-  repeated Where where = 4;
+  repeated QueryWithArgs where = 4;
   repeated string relations = 5;
   repeated Join joins = 6;
   int64 offset = 7;
   int64 limit = 8;
   repeated string order_by = 9;
+  bool where_all_with_deleted = 10;
 }
 
 message Exec {
@@ -141,7 +144,18 @@ message UpdateByPK {
   string table = 2;           // Target table name
   google.protobuf.Any data = 3;  // Data to be updated
   bool disable_cache = 4;     // Whether to disable caching
-  repeated Where where = 5;
+  repeated QueryWithArgs where = 5;
+}
+
+message UpdateAll {
+  // Lock key for concurrent insert operations
+  // The later task will not execute and get the result from the first task with the same lock key in the same time
+  string lock_key = 1;
+  string table = 2;           // Target table name
+  google.protobuf.Any data = 3;  // Data to be updated
+  bool disable_cache = 4;     // Whether to disable caching
+  repeated QueryWithArgs where = 5;
+  repeated QueryWithArgs set = 6;
 }
 
 // BulkUpdateByPK represents a bulk update operation
@@ -153,4 +167,25 @@ message BulkUpdateByPK {
   repeated google.protobuf.Any data = 3;  // Data to be updated
   bool disable_cache = 4;     // Whether to disable caching
   repeated string set = 5;
+}
+
+message DeleteByPK {
+  string lock_key = 1;
+  string table = 2;
+  repeated QueryWithArgs where = 3;
+  google.protobuf.Any data = 4;
+  bool disable_cache = 5;
+  bool force_delete = 6;
+}
+
+message BulkWriteWithTx {
+  // Lock key for concurrent insert operations
+  // The later task will not execute and get the result from the first task with the same lock key in the same time
+  string lock_key = 1;
+  repeated Operation operations = 3;  // Data to be updated
+}
+
+message Operation {
+  string name = 1;
+  google.protobuf.Any data = 2;
 }

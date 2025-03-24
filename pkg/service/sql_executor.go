@@ -28,7 +28,10 @@ type SQLExecutorInterface interface {
 	Exec(ctx context.Context, req *requestmodel.Exec) *responsemodel.BaseResponse
 	BulkInsert(ctx context.Context, req *requestmodel.BulkInsert) *responsemodel.BaseResponse
 	UpdateByPK(ctx context.Context, req *requestmodel.UpdateByPK) *responsemodel.BaseResponse
+	UpdateAll(ctx context.Context, req *requestmodel.UpdateAll) *responsemodel.BaseResponse
 	BulkUpdateByPK(ctx context.Context, req *requestmodel.BulkUpdateByPK) *responsemodel.BaseResponse
+	DeleteByPK(ctx context.Context, req *requestmodel.DeleteByPK) *responsemodel.BaseResponse
+	BulkWriteWithTx(ctx context.Context, req *requestmodel.BulkWriteWithTx) *responsemodel.BaseResponse
 }
 
 type sqlExecutorImpl struct {
@@ -106,10 +109,11 @@ func (s *sqlExecutorImpl) FindByPK(ctx context.Context, req *requestmodel.FindBy
 		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfiguration
 		mp    = &constant.ModelParams{
-			Database:     dbCfg.GetDatabaseName(),
-			Table:        req.Table,
-			DisableCache: isDisableCache(req.DisableCache),
-			ModeType:     config.DefaultModelType,
+			Database:            dbCfg.GetDatabaseName(),
+			Table:               req.Table,
+			DisableCache:        isDisableCache(req.DisableCache),
+			ModeType:            config.DefaultModelType,
+			WhereAllWithDeleted: req.WhereAllWithDeleted,
 		}
 		tableRegistry = config.GetModelRegistry().TableConfigurations[mp.Table]
 		arrKeys       []string
@@ -160,9 +164,10 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfiguration
 		mp    = &constant.ModelParams{
-			Database:     dbCfg.GetDatabaseName(),
-			Table:        req.Table,
-			DisableCache: isDisableCache(req.DisableCache),
+			Database:            dbCfg.GetDatabaseName(),
+			Table:               req.Table,
+			DisableCache:        isDisableCache(req.DisableCache),
+			WhereAllWithDeleted: req.WhereAllWithDeleted,
 		}
 		m   = config.GetModelRegistry().GetNewModel(mp.Table)
 		sql = orm.GetDB().NewSelect().Model(m)
@@ -172,7 +177,12 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 		return responsemodel.R400(err.Error())
 	}
 
+	sql.Limit(1)
 	sql.Offset(req.Offset)
+
+	if mp.WhereAllWithDeleted {
+		sql.WhereAllWithDeleted()
+	}
 
 	for _, v := range req.Where {
 		sql.Where(v.Query, v.Args...)
@@ -216,9 +226,10 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfiguration
 		mp    = &constant.ModelParams{
-			Database:     dbCfg.GetDatabaseName(),
-			Table:        req.Table,
-			DisableCache: isDisableCache(req.DisableCache),
+			Database:            dbCfg.GetDatabaseName(),
+			Table:               req.Table,
+			DisableCache:        isDisableCache(req.DisableCache),
+			WhereAllWithDeleted: req.WhereAllWithDeleted,
 		}
 		models = config.GetModelRegistry().GetNewSliceModel(mp.Table)
 		sql    = orm.GetDB().NewSelect().Model(models)
@@ -228,11 +239,12 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 		return responsemodel.R400(err.Error())
 	}
 
-	if req.Limit > 0 {
-		sql.Limit(req.Limit)
-	}
-
+	sql.Limit(req.Limit)
 	sql.Offset(req.Offset)
+
+	if mp.WhereAllWithDeleted {
+		sql.WhereAllWithDeleted()
+	}
 
 	for _, v := range req.Where {
 		sql.Where(v.Query, v.Args...)
@@ -285,43 +297,7 @@ func (s *sqlExecutorImpl) BulkInsert(ctx context.Context, req *requestmodel.Bulk
 		return responsemodel.R400(err.Error())
 	}
 
-	fn := func() (interface{}, error) {
-		var (
-			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
-			mp    = &constant.ModelParams{
-				Database:     dbCfg.GetDatabaseName(),
-				Table:        req.Table,
-				DisableCache: isDisableCache(req.DisableCache),
-			}
-		)
-
-		if err := req.Validate(); err != nil {
-			return nil, err
-		}
-
-		models, err := config.TransformModels(req.Table, nil, req.Data, config.PtrModelType)
-		if err != nil {
-			return nil, err
-		}
-
-		return d.BulkInsert(ctx, models, mp)
-	}
-
-	if req.LockKey == "" {
-		r, err := fn()
-		if err != nil {
-			return responsemodel.R400(err.Error())
-		}
-
-		return responsemodel.R200(r, false)
-	}
-
-	var (
-		key = dao.GetCustomLockKey(req.LockKey)
-	)
-
-	r, err, shared := s.g.Do(key, fn)
+	r, err, shared := s.bulkInsert(ctx, nil, req)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}
@@ -334,48 +310,20 @@ func (s *sqlExecutorImpl) UpdateByPK(ctx context.Context, req *requestmodel.Upda
 		return responsemodel.R400(err.Error())
 	}
 
-	fn := func() (interface{}, error) {
-		var (
-			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
-			mp    = &constant.ModelParams{
-				Database:     dbCfg.GetDatabaseName(),
-				Table:        req.Table,
-				DisableCache: isDisableCache(req.DisableCache),
-			}
-			sql = orm.GetDB().NewUpdate()
-		)
-
-		if err := req.Validate(); err != nil {
-			return nil, err
-		}
-
-		for _, v := range req.Where {
-			sql.Where(v.Query, v.Args...)
-		}
-
-		m, err := config.TransformModel(req.Table, nil, req.Data, config.PtrModelType)
-		if err != nil {
-			return nil, err
-		}
-
-		return d.UpdateByPK(ctx, sql, m, mp)
+	r, err, shared := s.updateByPK(ctx, nil, req)
+	if err != nil {
+		return responsemodel.R400(err.Error())
 	}
 
-	if req.LockKey == "" {
-		r, err := fn()
-		if err != nil {
-			return responsemodel.R400(err.Error())
-		}
+	return responsemodel.R200(r, shared)
+}
 
-		return responsemodel.R200(r, false)
+func (s *sqlExecutorImpl) UpdateAll(ctx context.Context, req *requestmodel.UpdateAll) *responsemodel.BaseResponse {
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
 	}
 
-	var (
-		key = dao.GetCustomLockKey(req.LockKey)
-	)
-
-	r, err, shared := s.g.Do(key, fn)
+	r, err, shared := s.updateAll(ctx, nil, req)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}
@@ -388,28 +336,46 @@ func (s *sqlExecutorImpl) BulkUpdateByPK(ctx context.Context, req *requestmodel.
 		return responsemodel.R400(err.Error())
 	}
 
+	r, err, shared := s.bulkUpdateByPK(ctx, nil, req)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	return responsemodel.R200(r, shared)
+}
+
+func (s *sqlExecutorImpl) DeleteByPK(ctx context.Context, req *requestmodel.DeleteByPK) *responsemodel.BaseResponse {
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	r, err, shared := s.deleteByPK(ctx, nil, req)
+	if err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	return responsemodel.R200(r, shared)
+}
+
+func (s *sqlExecutorImpl) BulkWriteWithTx(ctx context.Context, req *requestmodel.BulkWriteWithTx) *responsemodel.BaseResponse {
+	if err := config.ConfigurationUpdated(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
 	fn := func() (interface{}, error) {
-		var (
-			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
-			mp    = &constant.ModelParams{
-				Database:     dbCfg.GetDatabaseName(),
-				Table:        req.Table,
-				DisableCache: isDisableCache(req.DisableCache),
-			}
-			sql = orm.GetDB().NewUpdate().Column(req.Set...)
-		)
-
-		if err := req.Validate(); err != nil {
-			return nil, err
-		}
-
-		m, err := config.TransformModels(req.Table, nil, req.Data, config.PtrModelType)
+		tx, err := orm.BeginTx(ctx)
+		defer orm.HandleTxErr(ctx, tx, err)
 		if err != nil {
 			return nil, err
 		}
 
-		return d.BulkUpdateByPK(ctx, sql, m, mp)
+		if err = req.Validate(); err != nil {
+			return nil, err
+		}
+
+		err = s.processBulkWrite(ctx, &tx, req)
+
+		return req.Operations, err
 	}
 
 	if req.LockKey == "" {
@@ -422,7 +388,7 @@ func (s *sqlExecutorImpl) BulkUpdateByPK(ctx context.Context, req *requestmodel.
 	}
 
 	var (
-		key = dao.GetCustomLockKey(req.LockKey)
+		key = dao.GetBulkWriteWithTxLockKey(req.LockKey)
 	)
 
 	r, err, shared := s.g.Do(key, fn)

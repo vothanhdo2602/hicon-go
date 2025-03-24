@@ -78,10 +78,11 @@ func (m *DBConfiguration) Validate() error {
 }
 
 type FindByPK struct {
-	Table        string
-	DisableCache bool
-	Select       []string
-	Data         interface{}
+	Table               string
+	DisableCache        bool
+	Select              []string
+	Data                interface{}
+	WhereAllWithDeleted bool
 }
 
 func (m *FindByPK) Validate() error {
@@ -93,14 +94,15 @@ func (m *FindByPK) Validate() error {
 }
 
 type FindOne struct {
-	Table        string
-	DisableCache bool
-	Select       []string
-	Where        []*Where
-	Relations    []string
-	Join         []*Join
-	Offset       int
-	OrderBy      []string
+	Table               string
+	DisableCache        bool
+	Select              []string
+	Where               []*QueryWithArgs
+	Relations           []string
+	Join                []*Join
+	Offset              int
+	OrderBy             []string
+	WhereAllWithDeleted bool
 }
 
 func (m *FindOne) Validate() error {
@@ -111,15 +113,16 @@ func (m *FindOne) Validate() error {
 }
 
 type FindAll struct {
-	Table        string
-	DisableCache bool
-	Select       []string
-	Where        []*Where
-	Relations    []string
-	Joins        []*Join
-	Limit        int
-	Offset       int
-	OrderBy      []string
+	Table               string
+	DisableCache        bool
+	Select              []string
+	Where               []*QueryWithArgs
+	Relations           []string
+	Joins               []*Join
+	Limit               int
+	Offset              int
+	OrderBy             []string
+	WhereAllWithDeleted bool
 }
 
 func (m *FindAll) Validate() error {
@@ -129,7 +132,7 @@ func (m *FindAll) Validate() error {
 	)
 }
 
-type Where struct {
+type QueryWithArgs struct {
 	Query string
 	Args  []interface{}
 }
@@ -162,11 +165,11 @@ func (m *BulkInsert) Validate() error {
 
 type UpdateByPK struct {
 	// Lock key for concurrent insert operations
-	//The later task will not execute and get the result from the first task with the same lock key in the same time
+	// The later task with the same lock key in the same time will not execute and get the result from the first task
 	LockKey      string
 	Table        string
 	Data         interface{}
-	Where        []*Where
+	Where        []*QueryWithArgs
 	DisableCache bool
 }
 
@@ -178,14 +181,36 @@ func (m *UpdateByPK) Validate() error {
 	)
 }
 
+type UpdateAll struct {
+	// Lock key for concurrent insert operations
+	// The later task with the same lock key in the same time will not execute and get the result from the first task
+	LockKey             string
+	Table               string
+	Data                interface{}
+	Where               []*QueryWithArgs
+	Set                 []*QueryWithArgs
+	WhereAllWithDeleted bool
+	DisableCache        bool
+}
+
+func (m *UpdateAll) Validate() error {
+	return validation.ValidateStruct(
+		m,
+		validation.Field(&m.Table, validation.Required),
+		validation.Field(&m.Data, validation.Required),
+		validation.Field(&m.Where, validation.Required),
+		validation.Field(&m.Set, validation.Required),
+	)
+}
+
 type BulkUpdateByPK struct {
 	// Lock key for concurrent insert operations
-	//The later task will not execute and get the result from the first task with the same lock key in the same time
-	LockKey      string
-	Table        string
-	Set          []string
-	Data         []interface{}
-	DisableCache bool
+	// The later task with the same lock key in the same time will not execute and get the result from the first task
+	LockKey      string      `json:"lock_key"`
+	Table        string      `json:"table"`
+	Set          []string    `json:"set"`
+	Data         interface{} `json:"data"`
+	DisableCache bool        `json:"disable_cache"`
 }
 
 func (m *BulkUpdateByPK) Validate() error {
@@ -193,5 +218,49 @@ func (m *BulkUpdateByPK) Validate() error {
 		m,
 		validation.Field(&m.Table, validation.Required),
 		validation.Field(&m.Data, validation.Required),
+	)
+}
+
+type DeleteByPK struct {
+	// Lock key for concurrent insert operations
+	// The later task with the same lock key in the same time will not execute and get the result from the first task
+	LockKey      string
+	Table        string
+	Data         interface{}
+	Where        []*QueryWithArgs
+	DisableCache bool
+	ForceDelete  bool
+}
+
+func (m *DeleteByPK) Validate() error {
+	return validation.ValidateStruct(
+		m,
+
+		validation.Field(&m.Table, validation.Required),
+		validation.Field(&m.Data, validation.Required),
+	)
+}
+
+type BulkWriteWithTx struct {
+	LockKey    string
+	Operations []*Operation
+}
+
+func (m *BulkWriteWithTx) Validate() error {
+	return validation.ValidateStruct(
+		m,
+		validation.Field(&m.Operations),
+	)
+}
+
+type Operation struct {
+	Name string
+	Data interface{}
+}
+
+func (m *Operation) Validate() error {
+	return validation.ValidateStruct(
+		m,
+		validation.Field(&m.Name, validation.In(constant.BWOperationBulkInsert, constant.BWOperationUpdateByPK, constant.BWOperationUpdateAll, constant.BWOperationBulkUpdateByPK, constant.BWOperationDeleteByPK)),
 	)
 }

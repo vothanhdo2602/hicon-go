@@ -47,10 +47,11 @@ func (s *ModelRegistry) GetModelBuilder(tbl, modelType string) []reflect.StructF
 }
 
 type TableConfiguration struct {
-	Name            string
-	PrimaryColumns  map[string]interface{}
-	ColumnConfigs   map[string]*ColumnConfig
-	RelationColumns map[string]*RelationColumn
+	Name              string
+	PrimaryColumns    map[string]interface{}
+	ColumnConfigs     map[string]*ColumnConfig
+	RelationColumns   map[string]*RelationColumn
+	SoftDeleteColumns map[string]string
 }
 
 func (s *ModelRegistry) GetTableConfiguration(tbl string) *TableConfiguration {
@@ -98,10 +99,11 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 
 	for _, t := range req.TableConfigurations {
 		tblCfg := &TableConfiguration{
-			Name:            t.Name,
-			ColumnConfigs:   map[string]*ColumnConfig{},
-			PrimaryColumns:  map[string]interface{}{},
-			RelationColumns: map[string]*RelationColumn{},
+			Name:              t.Name,
+			ColumnConfigs:     map[string]*ColumnConfig{},
+			PrimaryColumns:    map[string]interface{}{},
+			RelationColumns:   map[string]*RelationColumn{},
+			SoftDeleteColumns: map[string]string{},
 		}
 
 		for _, col := range t.ColumnConfigs {
@@ -114,6 +116,10 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 
 			if col.IsPrimaryKey {
 				tblCfg.PrimaryColumns[col.Name] = col.Name
+			}
+
+			if col.SoftDelete {
+				tblCfg.SoftDeleteColumns[col.Name] = col.Name
 			}
 		}
 
