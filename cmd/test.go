@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/goccy/go-json"
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/grpctil"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
@@ -12,8 +13,8 @@ import (
 
 func UpsertConfiguration(ctx context.Context) {
 	var (
-		req = &sqlexecutor.UpsertConfiguration{
-			DbConfiguration: &sqlexecutor.DBConfiguration{
+		req = &requestmodel.UpsertConfiguration{
+			DBConfiguration: &requestmodel.DBConfiguration{
 				Type:     "postgres",
 				Host:     "localhost",
 				Port:     5432,
@@ -23,22 +24,22 @@ func UpsertConfiguration(ctx context.Context) {
 				MaxCons:  90,
 			},
 			Debug: true,
-			TableConfigurations: []*sqlexecutor.TableConfiguration{
+			TableConfigurations: []*requestmodel.TableConfiguration{
 				{
 					Name: "users",
-					Columns: []*sqlexecutor.Column{
+					Columns: []*requestmodel.Column{
 						{Name: "id", Type: "text", IsPrimaryKey: true},
 						{Name: "type", Type: "string"},
 						{Name: "created_at", Type: "time"},
 						{Name: "deleted_at", Type: "time", SoftDelete: true},
 					},
-					RelationColumns: []*sqlexecutor.RelationColumn{
+					RelationColumns: []*requestmodel.RelationColumn{
 						{Name: "profile", Type: orm.HasOne, RefTable: "profiles", Join: "id=user_id"},
 					},
 				},
 				{
 					Name: "profiles",
-					Columns: []*sqlexecutor.Column{
+					Columns: []*requestmodel.Column{
 						{Name: "id", Type: "text", IsPrimaryKey: true},
 						{Name: "user_id", Type: "string"},
 						{Name: "email", Type: "string"},
@@ -47,7 +48,7 @@ func UpsertConfiguration(ctx context.Context) {
 					},
 				},
 			},
-			Redis: &sqlexecutor.Redis{
+			Redis: &requestmodel.Redis{
 				Host:     "localhost",
 				Port:     6379,
 				Username: "hicon",
@@ -57,12 +58,17 @@ func UpsertConfiguration(ctx context.Context) {
 		}
 	)
 
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	_, err = sqlexecutor.NewSQLExecutorClient(conn).UpsertConfiguration(ctx, req)
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).UpsertConfiguration(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		return
 	}
@@ -70,23 +76,26 @@ func UpsertConfiguration(ctx context.Context) {
 
 func FindByPK(ctx context.Context) {
 	var (
-		req = &sqlexecutor.FindByPK{
+		req = &requestmodel.FindByPK{
 			Table:  "users",
 			Select: []string{"id"},
+			Data: map[string]interface{}{
+				"id": "67c567cd8b606b2293af1519",
+			},
 		}
 	)
 
-	data, _ := grpctil.ConvertInterfaceToPbAny(map[string]interface{}{
-		"id": "67c567cd8b606b2293af1519",
-	})
-	req.Data = data
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindByPK(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindByPK(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -97,23 +106,28 @@ func FindByPK(ctx context.Context) {
 
 func FindOne(ctx context.Context) {
 	var (
-		req = &sqlexecutor.FindOne{
+		req = &requestmodel.FindOne{
 			Table:        "users",
 			DisableCache: false,
 			Select:       []string{},
-			Where:        []*sqlexecutor.QueryWithArgs{},
+			Where:        []*requestmodel.QueryWithArgs{},
 			Relations:    []string{"Profile"},
 			Offset:       0,
 			OrderBy:      []string{},
 		}
 	)
 
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindOne(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindOne(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -124,11 +138,11 @@ func FindOne(ctx context.Context) {
 
 func FindAll(ctx context.Context) {
 	var (
-		req = &sqlexecutor.FindAll{
+		req = &requestmodel.FindAll{
 			Table:        "users",
 			DisableCache: false,
 			Select:       []string{},
-			Where:        []*sqlexecutor.QueryWithArgs{},
+			Where:        []*requestmodel.QueryWithArgs{},
 			Relations:    []string{"profile"},
 			Offset:       0,
 			OrderBy:      []string{},
@@ -136,33 +150,43 @@ func FindAll(ctx context.Context) {
 		}
 	)
 
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindAll(ctx, req)
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).FindAll(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	fmt.Println("resp", resp.Data)
+	//fmt.Println("resp", resp.Data)
 }
 
 func Exec(ctx context.Context) {
 	var (
-		req = &sqlexecutor.Exec{
-			Sql: `SELECT "users"."id", "users"."type", "profile"."name" AS "profile__name", "profile"."id" AS "profile__id", "profile"."user_id" AS "profile__user_id", "profile"."email" AS "profile__email" FROM "users" LEFT JOIN "profiles" AS "profile" ON ("profile"."user_id" = "users"."id")`,
+		req = &requestmodel.Exec{
+			SQL: `SELECT "users"."id", "users"."type", "profile"."name" AS "profile__name", "profile"."id" AS "profile__id", "profile"."user_id" AS "profile__user_id", "profile"."email" AS "profile__email" FROM "users" LEFT JOIN "profiles" AS "profile" ON ("profile"."user_id" = "users"."id")`,
 		}
 	)
+
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	_, err = sqlexecutor.NewSQLExecutorClient(conn).Exec(ctx, req)
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).Exec(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -173,29 +197,29 @@ func Exec(ctx context.Context) {
 
 func BulkInsert(ctx context.Context) {
 	var (
-		req = &sqlexecutor.BulkInsert{
+		req = &requestmodel.BulkInsert{
 			Table:        "users",
 			DisableCache: true,
-			Data:         []*anypb.Any{},
+			Data: []interface{}{
+				map[string]interface{}{
+					"id":   "67d299ad4244a581108b7ca5",
+					"type": "system",
+				},
+			},
 		}
 	)
 
-	data := []interface{}{
-		map[string]interface{}{
-			"id":   "67d299ad4244a581108b7ca5",
-			"type": "system",
-		},
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
 	}
-
-	dataConverted, _ := grpctil.ConvertSliceAnyToPbAnySlice(data)
-	req.Data = dataConverted
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkInsert(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkInsert(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -206,27 +230,28 @@ func BulkInsert(ctx context.Context) {
 
 func UpdateByPK(ctx context.Context) {
 	var (
-		req = &sqlexecutor.UpdateByPK{
+		req = &requestmodel.UpdateByPK{
 			Table:        "users",
 			DisableCache: false,
+			Data: map[string]interface{}{
+				"id":   "67d299ad4244a581108b7da4",
+				"type": "system",
+				//"created_at": time.Now(),
+			},
 		}
 	)
 
-	data := map[string]interface{}{
-		"id":   "67d299ad4244a581108b7da4",
-		"type": "system",
-		//"created_at": time.Now(),
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
 	}
-
-	dataConverted, _ := grpctil.ConvertInterfaceToPbAny(data)
-	req.Data = dataConverted
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).UpdateByPK(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).UpdateByPK(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -236,35 +261,35 @@ func UpdateByPK(ctx context.Context) {
 }
 
 func UpdateAll(ctx context.Context) {
-	id, _ := grpctil.ConvertInterfaceToPbAny("67c567cd8b606b2293af1")
 	var (
-		req = &sqlexecutor.UpdateAll{
+		req = &requestmodel.UpdateAll{
 			Table:        "users",
 			DisableCache: false,
-			Where: []*sqlexecutor.QueryWithArgs{
-				{Query: "id = ?", Args: []*anypb.Any{id}},
+			Where: []*requestmodel.QueryWithArgs{
+				{Query: "id = ?", Args: []interface{}{"67c567cd8b606b2293af1"}},
 			},
-			Set: []*sqlexecutor.QueryWithArgs{
-				{Query: "id = ?", Args: []*anypb.Any{id}},
+			Set: []*requestmodel.QueryWithArgs{
+				{Query: "id = ?", Args: []interface{}{"67c567cd8b606b2293af1"}},
+			},
+			Data: map[string]interface{}{
+				"id":   "67d299ad4244a581108b7da4",
+				"type": "system",
+				//"created_at": time.Now(),
 			},
 		}
 	)
 
-	data := map[string]interface{}{
-		"id":   "67d299ad4244a581108b7da4",
-		"type": "system",
-		//"created_at": time.Now(),
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
 	}
-
-	dataConverted, _ := grpctil.ConvertInterfaceToPbAny(data)
-	req.Data = dataConverted
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).UpdateAll(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).UpdateAll(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -275,35 +300,36 @@ func UpdateAll(ctx context.Context) {
 
 func BulkUpdateByPK(ctx context.Context) {
 	var (
-		req = &sqlexecutor.BulkUpdateByPK{
+		req = &requestmodel.BulkUpdateByPK{
 			Table:        "users",
 			DisableCache: false,
 			Set:          []string{"type"},
+			Data: []interface{}{
+				map[string]interface{}{
+					"id":   "67d299ad4244a581108b7da4",
+					"type": "system",
+					//"created_at": time.Now(),
+				},
+				map[string]interface{}{
+					"id":   "67d299ad4244a581108b7da4",
+					"type": "system",
+					//"created_at": time.Now(),
+				},
+			},
 		}
 	)
 
-	data := []interface{}{
-		map[string]interface{}{
-			"id":   "67d299ad4244a581108b7da4",
-			"type": "system",
-			//"created_at": time.Now(),
-		},
-		map[string]interface{}{
-			"id":   "67d299ad4244a581108b7da4",
-			"type": "system",
-			//"created_at": time.Now(),
-		},
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
 	}
-
-	dataConverted, _ := grpctil.ConvertSliceAnyToPbAnySlice(data)
-	req.Data = dataConverted
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkUpdateByPK(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkUpdateByPK(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -314,27 +340,28 @@ func BulkUpdateByPK(ctx context.Context) {
 
 func DeleteByPK(ctx context.Context) {
 	var (
-		req = &sqlexecutor.DeleteByPK{
+		req = &requestmodel.DeleteByPK{
 			Table:        "users",
 			DisableCache: false,
+			Data: map[string]interface{}{
+				"id":   "67d299ad4244a581108b7da4",
+				"type": "system",
+				//"created_at": time.Now(),
+			},
 		}
 	)
 
-	data := map[string]interface{}{
-		"id":   "67d299ad4244a581108b7da4",
-		"type": "system",
-		//"created_at": time.Now(),
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
 	}
-
-	dataConverted, _ := grpctil.ConvertInterfaceToPbAny(data)
-	req.Data = dataConverted
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).DeleteByPK(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).DeleteByPK(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -372,30 +399,32 @@ func BulkWriteWithTx(ctx context.Context) {
 		}
 	)
 
-	bulkUpdateByPKBytes, _ := grpctil.ConvertInterfaceToPbAny(bulkUpdateByPK)
-	updateByPKBytes, _ := grpctil.ConvertInterfaceToPbAny(updateByPK)
-
 	var (
-		req = &sqlexecutor.BulkWriteWithTx{
-			Operations: []*sqlexecutor.Operation{
+		req = &requestmodel.BulkWriteWithTx{
+			Operations: []*requestmodel.Operation{
 				{
 					Name: "bulk_update_by_pk",
-					Data: bulkUpdateByPKBytes,
+					Data: bulkUpdateByPK,
 				},
 				{
 					Name: "update_by_pk",
-					Data: updateByPKBytes,
+					Data: updateByPK,
 				},
 			},
 		}
 	)
+
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
 
 	conn, err := grpctil.NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkWriteWithTx(ctx, req)
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).BulkWriteWithTx(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return

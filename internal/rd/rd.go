@@ -380,39 +380,19 @@ func HDelRefSQL(ctx context.Context, mp *constant.ModelParams) {
 	}
 
 	var (
-		key             = entity.GetSQLBucketKeyWithTablePrefix(mp.Database, mp.Table)
-		fieldWithPrefix = fmt.Sprintf("*%s*", mp.Table)
+		key = entity.GetSQLBucketKeyWithTablePrefix(mp.Database, mp.Table)
 	)
 
 	for {
 		// Scan for matching fields
-		keys, cursor, err := client.HScan(ctx, key, 0, fieldWithPrefix, 100).Result()
+		keys, cursor, err := client.Scan(ctx, 0, key, 1000).Result()
 		if err != nil {
 			return
 		}
 
-		//for iter.Next(ctx) {
-		//	val := iter.Val()
-		//	//if len(fields) > 0 {
-		//	//	deleted, err := client.HDel(ctx, key, fields...).Result()
-		//	//	if err != nil {
-		//	//		return
-		//	//	}
-		//	//	totalDeleted += deleted
-		//	//}
-		//
-		//	fmt.Println("@@@@@@@@@2")
-		//}
-
-		//Extract field names that match the pattern
-		var fields []string
-		for i := 0; i < len(keys); i += 2 {
-			fields = append(fields, keys[i])
-		}
-
 		// Delete the matching fields
-		if len(fields) > 0 {
-			_, err := client.HDel(ctx, key, fields...).Result()
+		if len(keys) > 0 {
+			_, err = client.Del(ctx, keys...).Result()
 			if err != nil {
 				return
 			}
@@ -422,7 +402,5 @@ func HDelRefSQL(ctx context.Context, mp *constant.ModelParams) {
 		if cursor == 0 {
 			break
 		}
-
-		fmt.Println("loop")
 	}
 }

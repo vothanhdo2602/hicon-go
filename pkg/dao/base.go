@@ -256,6 +256,8 @@ func (s *baseImpl) BulkInsert(ctx context.Context, db bun.IDB, models interface{
 		return nil, err
 	}
 
+	go rd.HDelRefSQL(ctx, mp)
+
 	return models, nil
 }
 

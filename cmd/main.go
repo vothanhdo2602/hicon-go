@@ -28,10 +28,10 @@ func main() {
 		UpsertConfiguration(ctx)
 
 		for i := 0; i < 1; i++ {
-			FindAll(ctx)
+			//FindAll(ctx)
 			//go BulkInsert(ctx)
 			//go FindByPK(ctx)
-			//go FindOne(ctx)
+			go FindOne(ctx)
 			//go UpdateByPK(ctx)
 			//go BulkUpdateByPK(ctx)
 			//go UpdateAll(ctx)

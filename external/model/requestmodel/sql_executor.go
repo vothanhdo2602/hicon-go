@@ -41,11 +41,11 @@ type TLS struct {
 
 type TableConfiguration struct {
 	Name            string
-	ColumnConfigs   []*ColumnConfig
-	RelationColumns []*RelationColumns
+	Columns         []*Column
+	RelationColumns []*RelationColumn
 }
 
-type ColumnConfig struct {
+type Column struct {
 	Name         string
 	Type         string
 	Nullable     bool
@@ -53,7 +53,7 @@ type ColumnConfig struct {
 	SoftDelete   bool
 }
 
-type RelationColumns struct {
+type RelationColumn struct {
 	Name     string
 	RefTable string
 	Type     string

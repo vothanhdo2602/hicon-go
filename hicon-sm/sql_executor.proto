@@ -1,19 +1,20 @@
 syntax = "proto3";
 
 import "hicon-sm/type.proto";
+import "google/protobuf/any.proto";
 
 option go_package = "./sqlexecutor";
 
 service SQLExecutor {
-  rpc UpsertConfiguration(hicon.type.UpsertConfiguration) returns (hicon.type.BaseResponse) {}
-  rpc FindByPK(hicon.type.FindByPK) returns (hicon.type.BaseResponse) {}
-  rpc FindOne(hicon.type.FindOne) returns (hicon.type.BaseResponse) {}
-  rpc FindAll(hicon.type.FindAll) returns (hicon.type.BaseResponse) {}
-  rpc Exec(hicon.type.Exec) returns (hicon.type.BaseResponse) {}
-  rpc BulkInsert(hicon.type.BulkInsert) returns (hicon.type.BaseResponse) {}
-  rpc UpdateByPK(hicon.type.UpdateByPK) returns (hicon.type.BaseResponse) {}
-  rpc UpdateAll(hicon.type.UpdateAll) returns (hicon.type.BaseResponse) {}
-  rpc BulkUpdateByPK(hicon.type.BulkUpdateByPK) returns (hicon.type.BaseResponse) {}
-  rpc DeleteByPK(hicon.type.DeleteByPK) returns (hicon.type.BaseResponse) {}
-  rpc BulkWriteWithTx(hicon.type.BulkWriteWithTx) returns (hicon.type.BaseResponse) {}
+  rpc UpsertConfiguration(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc FindByPK(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc FindOne(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc FindAll(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc Exec(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc BulkInsert(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc UpdateByPK(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc UpdateAll(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc BulkUpdateByPK(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc DeleteByPK(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
+  rpc BulkWriteWithTx(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
 }

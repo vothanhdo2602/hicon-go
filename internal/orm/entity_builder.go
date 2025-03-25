@@ -44,7 +44,7 @@ func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField,
 	)
 
 	// Add fields based on column configurations
-	for colName, col := range tableConfig.ColumnConfigs {
+	for colName, col := range tableConfig.Columns {
 		fieldType, ptrFieldType := getGoType(col.Type, col.Nullable)
 
 		// Build bun tag

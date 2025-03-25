@@ -49,7 +49,7 @@ func (s *ModelRegistry) GetModelBuilder(tbl, modelType string) []reflect.StructF
 type TableConfiguration struct {
 	Name              string
 	PrimaryColumns    map[string]interface{}
-	ColumnConfigs     map[string]*ColumnConfig
+	Columns           map[string]*Column
 	RelationColumns   map[string]*RelationColumn
 	SoftDeleteColumns map[string]string
 }
@@ -65,7 +65,7 @@ type RelationColumn struct {
 	Join     string
 }
 
-type ColumnConfig struct {
+type Column struct {
 	Type         string
 	Nullable     bool
 	IsPrimaryKey bool
@@ -100,14 +100,14 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 	for _, t := range req.TableConfigurations {
 		tblCfg := &TableConfiguration{
 			Name:              t.Name,
-			ColumnConfigs:     map[string]*ColumnConfig{},
+			Columns:           map[string]*Column{},
 			PrimaryColumns:    map[string]interface{}{},
 			RelationColumns:   map[string]*RelationColumn{},
 			SoftDeleteColumns: map[string]string{},
 		}
 
-		for _, col := range t.ColumnConfigs {
-			tblCfg.ColumnConfigs[col.Name] = &ColumnConfig{
+		for _, col := range t.Columns {
+			tblCfg.Columns[col.Name] = &Column{
 				Type:         col.Type,
 				Nullable:     col.Nullable,
 				IsPrimaryKey: col.IsPrimaryKey,

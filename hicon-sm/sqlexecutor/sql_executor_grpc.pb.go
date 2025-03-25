@@ -11,6 +11,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	anypb "google.golang.org/protobuf/types/known/anypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -36,17 +37,17 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SQLExecutorClient interface {
-	UpsertConfiguration(ctx context.Context, in *UpsertConfiguration, opts ...grpc.CallOption) (*BaseResponse, error)
-	FindByPK(ctx context.Context, in *FindByPK, opts ...grpc.CallOption) (*BaseResponse, error)
-	FindOne(ctx context.Context, in *FindOne, opts ...grpc.CallOption) (*BaseResponse, error)
-	FindAll(ctx context.Context, in *FindAll, opts ...grpc.CallOption) (*BaseResponse, error)
-	Exec(ctx context.Context, in *Exec, opts ...grpc.CallOption) (*BaseResponse, error)
-	BulkInsert(ctx context.Context, in *BulkInsert, opts ...grpc.CallOption) (*BaseResponse, error)
-	UpdateByPK(ctx context.Context, in *UpdateByPK, opts ...grpc.CallOption) (*BaseResponse, error)
-	UpdateAll(ctx context.Context, in *UpdateAll, opts ...grpc.CallOption) (*BaseResponse, error)
-	BulkUpdateByPK(ctx context.Context, in *BulkUpdateByPK, opts ...grpc.CallOption) (*BaseResponse, error)
-	DeleteByPK(ctx context.Context, in *DeleteByPK, opts ...grpc.CallOption) (*BaseResponse, error)
-	BulkWriteWithTx(ctx context.Context, in *BulkWriteWithTx, opts ...grpc.CallOption) (*BaseResponse, error)
+	UpsertConfiguration(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	FindByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	FindOne(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	FindAll(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	Exec(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	BulkInsert(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	UpdateByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	UpdateAll(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	BulkUpdateByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	DeleteByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
+	BulkWriteWithTx(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
 }
 
 type sQLExecutorClient struct {
@@ -57,7 +58,7 @@ func NewSQLExecutorClient(cc grpc.ClientConnInterface) SQLExecutorClient {
 	return &sQLExecutorClient{cc}
 }
 
-func (c *sQLExecutorClient) UpsertConfiguration(ctx context.Context, in *UpsertConfiguration, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) UpsertConfiguration(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_UpsertConfiguration_FullMethodName, in, out, cOpts...)
@@ -67,7 +68,7 @@ func (c *sQLExecutorClient) UpsertConfiguration(ctx context.Context, in *UpsertC
 	return out, nil
 }
 
-func (c *sQLExecutorClient) FindByPK(ctx context.Context, in *FindByPK, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) FindByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_FindByPK_FullMethodName, in, out, cOpts...)
@@ -77,7 +78,7 @@ func (c *sQLExecutorClient) FindByPK(ctx context.Context, in *FindByPK, opts ...
 	return out, nil
 }
 
-func (c *sQLExecutorClient) FindOne(ctx context.Context, in *FindOne, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) FindOne(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_FindOne_FullMethodName, in, out, cOpts...)
@@ -87,7 +88,7 @@ func (c *sQLExecutorClient) FindOne(ctx context.Context, in *FindOne, opts ...gr
 	return out, nil
 }
 
-func (c *sQLExecutorClient) FindAll(ctx context.Context, in *FindAll, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) FindAll(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_FindAll_FullMethodName, in, out, cOpts...)
@@ -97,7 +98,7 @@ func (c *sQLExecutorClient) FindAll(ctx context.Context, in *FindAll, opts ...gr
 	return out, nil
 }
 
-func (c *sQLExecutorClient) Exec(ctx context.Context, in *Exec, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) Exec(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_Exec_FullMethodName, in, out, cOpts...)
@@ -107,7 +108,7 @@ func (c *sQLExecutorClient) Exec(ctx context.Context, in *Exec, opts ...grpc.Cal
 	return out, nil
 }
 
-func (c *sQLExecutorClient) BulkInsert(ctx context.Context, in *BulkInsert, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) BulkInsert(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_BulkInsert_FullMethodName, in, out, cOpts...)
@@ -117,7 +118,7 @@ func (c *sQLExecutorClient) BulkInsert(ctx context.Context, in *BulkInsert, opts
 	return out, nil
 }
 
-func (c *sQLExecutorClient) UpdateByPK(ctx context.Context, in *UpdateByPK, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) UpdateByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_UpdateByPK_FullMethodName, in, out, cOpts...)
@@ -127,7 +128,7 @@ func (c *sQLExecutorClient) UpdateByPK(ctx context.Context, in *UpdateByPK, opts
 	return out, nil
 }
 
-func (c *sQLExecutorClient) UpdateAll(ctx context.Context, in *UpdateAll, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) UpdateAll(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_UpdateAll_FullMethodName, in, out, cOpts...)
@@ -137,7 +138,7 @@ func (c *sQLExecutorClient) UpdateAll(ctx context.Context, in *UpdateAll, opts .
 	return out, nil
 }
 
-func (c *sQLExecutorClient) BulkUpdateByPK(ctx context.Context, in *BulkUpdateByPK, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) BulkUpdateByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_BulkUpdateByPK_FullMethodName, in, out, cOpts...)
@@ -147,7 +148,7 @@ func (c *sQLExecutorClient) BulkUpdateByPK(ctx context.Context, in *BulkUpdateBy
 	return out, nil
 }
 
-func (c *sQLExecutorClient) DeleteByPK(ctx context.Context, in *DeleteByPK, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) DeleteByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_DeleteByPK_FullMethodName, in, out, cOpts...)
@@ -157,7 +158,7 @@ func (c *sQLExecutorClient) DeleteByPK(ctx context.Context, in *DeleteByPK, opts
 	return out, nil
 }
 
-func (c *sQLExecutorClient) BulkWriteWithTx(ctx context.Context, in *BulkWriteWithTx, opts ...grpc.CallOption) (*BaseResponse, error) {
+func (c *sQLExecutorClient) BulkWriteWithTx(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(BaseResponse)
 	err := c.cc.Invoke(ctx, SQLExecutor_BulkWriteWithTx_FullMethodName, in, out, cOpts...)
@@ -171,17 +172,17 @@ func (c *sQLExecutorClient) BulkWriteWithTx(ctx context.Context, in *BulkWriteWi
 // All implementations must embed UnimplementedSQLExecutorServer
 // for forward compatibility.
 type SQLExecutorServer interface {
-	UpsertConfiguration(context.Context, *UpsertConfiguration) (*BaseResponse, error)
-	FindByPK(context.Context, *FindByPK) (*BaseResponse, error)
-	FindOne(context.Context, *FindOne) (*BaseResponse, error)
-	FindAll(context.Context, *FindAll) (*BaseResponse, error)
-	Exec(context.Context, *Exec) (*BaseResponse, error)
-	BulkInsert(context.Context, *BulkInsert) (*BaseResponse, error)
-	UpdateByPK(context.Context, *UpdateByPK) (*BaseResponse, error)
-	UpdateAll(context.Context, *UpdateAll) (*BaseResponse, error)
-	BulkUpdateByPK(context.Context, *BulkUpdateByPK) (*BaseResponse, error)
-	DeleteByPK(context.Context, *DeleteByPK) (*BaseResponse, error)
-	BulkWriteWithTx(context.Context, *BulkWriteWithTx) (*BaseResponse, error)
+	UpsertConfiguration(context.Context, *anypb.Any) (*BaseResponse, error)
+	FindByPK(context.Context, *anypb.Any) (*BaseResponse, error)
+	FindOne(context.Context, *anypb.Any) (*BaseResponse, error)
+	FindAll(context.Context, *anypb.Any) (*BaseResponse, error)
+	Exec(context.Context, *anypb.Any) (*BaseResponse, error)
+	BulkInsert(context.Context, *anypb.Any) (*BaseResponse, error)
+	UpdateByPK(context.Context, *anypb.Any) (*BaseResponse, error)
+	UpdateAll(context.Context, *anypb.Any) (*BaseResponse, error)
+	BulkUpdateByPK(context.Context, *anypb.Any) (*BaseResponse, error)
+	DeleteByPK(context.Context, *anypb.Any) (*BaseResponse, error)
+	BulkWriteWithTx(context.Context, *anypb.Any) (*BaseResponse, error)
 	mustEmbedUnimplementedSQLExecutorServer()
 }
 
@@ -192,37 +193,37 @@ type SQLExecutorServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSQLExecutorServer struct{}
 
-func (UnimplementedSQLExecutorServer) UpsertConfiguration(context.Context, *UpsertConfiguration) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) UpsertConfiguration(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpsertConfiguration not implemented")
 }
-func (UnimplementedSQLExecutorServer) FindByPK(context.Context, *FindByPK) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) FindByPK(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindByPK not implemented")
 }
-func (UnimplementedSQLExecutorServer) FindOne(context.Context, *FindOne) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) FindOne(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindOne not implemented")
 }
-func (UnimplementedSQLExecutorServer) FindAll(context.Context, *FindAll) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) FindAll(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindAll not implemented")
 }
-func (UnimplementedSQLExecutorServer) Exec(context.Context, *Exec) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) Exec(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Exec not implemented")
 }
-func (UnimplementedSQLExecutorServer) BulkInsert(context.Context, *BulkInsert) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) BulkInsert(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BulkInsert not implemented")
 }
-func (UnimplementedSQLExecutorServer) UpdateByPK(context.Context, *UpdateByPK) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) UpdateByPK(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateByPK not implemented")
 }
-func (UnimplementedSQLExecutorServer) UpdateAll(context.Context, *UpdateAll) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) UpdateAll(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateAll not implemented")
 }
-func (UnimplementedSQLExecutorServer) BulkUpdateByPK(context.Context, *BulkUpdateByPK) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) BulkUpdateByPK(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BulkUpdateByPK not implemented")
 }
-func (UnimplementedSQLExecutorServer) DeleteByPK(context.Context, *DeleteByPK) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) DeleteByPK(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteByPK not implemented")
 }
-func (UnimplementedSQLExecutorServer) BulkWriteWithTx(context.Context, *BulkWriteWithTx) (*BaseResponse, error) {
+func (UnimplementedSQLExecutorServer) BulkWriteWithTx(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BulkWriteWithTx not implemented")
 }
 func (UnimplementedSQLExecutorServer) mustEmbedUnimplementedSQLExecutorServer() {}
@@ -247,7 +248,7 @@ func RegisterSQLExecutorServer(s grpc.ServiceRegistrar, srv SQLExecutorServer) {
 }
 
 func _SQLExecutor_UpsertConfiguration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpsertConfiguration)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -259,13 +260,13 @@ func _SQLExecutor_UpsertConfiguration_Handler(srv interface{}, ctx context.Conte
 		FullMethod: SQLExecutor_UpsertConfiguration_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).UpsertConfiguration(ctx, req.(*UpsertConfiguration))
+		return srv.(SQLExecutorServer).UpsertConfiguration(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_FindByPK_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FindByPK)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -277,13 +278,13 @@ func _SQLExecutor_FindByPK_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: SQLExecutor_FindByPK_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).FindByPK(ctx, req.(*FindByPK))
+		return srv.(SQLExecutorServer).FindByPK(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_FindOne_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FindOne)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -295,13 +296,13 @@ func _SQLExecutor_FindOne_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: SQLExecutor_FindOne_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).FindOne(ctx, req.(*FindOne))
+		return srv.(SQLExecutorServer).FindOne(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_FindAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(FindAll)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -313,13 +314,13 @@ func _SQLExecutor_FindAll_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: SQLExecutor_FindAll_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).FindAll(ctx, req.(*FindAll))
+		return srv.(SQLExecutorServer).FindAll(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_Exec_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Exec)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -331,13 +332,13 @@ func _SQLExecutor_Exec_Handler(srv interface{}, ctx context.Context, dec func(in
 		FullMethod: SQLExecutor_Exec_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).Exec(ctx, req.(*Exec))
+		return srv.(SQLExecutorServer).Exec(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_BulkInsert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BulkInsert)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -349,13 +350,13 @@ func _SQLExecutor_BulkInsert_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: SQLExecutor_BulkInsert_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).BulkInsert(ctx, req.(*BulkInsert))
+		return srv.(SQLExecutorServer).BulkInsert(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_UpdateByPK_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateByPK)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -367,13 +368,13 @@ func _SQLExecutor_UpdateByPK_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: SQLExecutor_UpdateByPK_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).UpdateByPK(ctx, req.(*UpdateByPK))
+		return srv.(SQLExecutorServer).UpdateByPK(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_UpdateAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateAll)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -385,13 +386,13 @@ func _SQLExecutor_UpdateAll_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: SQLExecutor_UpdateAll_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).UpdateAll(ctx, req.(*UpdateAll))
+		return srv.(SQLExecutorServer).UpdateAll(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_BulkUpdateByPK_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BulkUpdateByPK)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -403,13 +404,13 @@ func _SQLExecutor_BulkUpdateByPK_Handler(srv interface{}, ctx context.Context, d
 		FullMethod: SQLExecutor_BulkUpdateByPK_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).BulkUpdateByPK(ctx, req.(*BulkUpdateByPK))
+		return srv.(SQLExecutorServer).BulkUpdateByPK(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_DeleteByPK_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteByPK)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -421,13 +422,13 @@ func _SQLExecutor_DeleteByPK_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: SQLExecutor_DeleteByPK_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).DeleteByPK(ctx, req.(*DeleteByPK))
+		return srv.(SQLExecutorServer).DeleteByPK(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_BulkWriteWithTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BulkWriteWithTx)
+	in := new(anypb.Any)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -439,7 +440,7 @@ func _SQLExecutor_BulkWriteWithTx_Handler(srv interface{}, ctx context.Context, 
 		FullMethod: SQLExecutor_BulkWriteWithTx_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).BulkWriteWithTx(ctx, req.(*BulkWriteWithTx))
+		return srv.(SQLExecutorServer).BulkWriteWithTx(ctx, req.(*anypb.Any))
 	}
 	return interceptor(ctx, in, info, handler)
 }
