@@ -5,6 +5,7 @@ import (
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"reflect"
+	"regexp"
 	"strings"
 )
 
@@ -45,8 +46,13 @@ func GetReflectValue(m interface{}) reflect.Value {
 	return val
 }
 
-func GetSQLBucketKey(database string) string {
-	return fmt.Sprintf("%s:%s", SQLBucketKey, database)
+func GetSQLBucketKey(database, sql string) string {
+	sql = ReduceSQL(sql)
+	return fmt.Sprintf("%s:%s:%s", SQLBucketKey, database, sql)
+}
+
+func GetSQLBucketKeyWithTablePrefix(database, table string) string {
+	return fmt.Sprintf(`%s:%s:*"%s"*`, SQLBucketKey, database, table)
 }
 
 func GetValueByNameAsString(val reflect.Value, fieldName string) string {
@@ -85,4 +91,9 @@ func IsZeroValueField(v interface{}, fieldName string) bool {
 	}
 
 	return false
+}
+
+func ReduceSQL(sql string) string {
+	re := regexp.MustCompile("SELECT (.*) FROM")
+	return re.ReplaceAllString(sql, "SELECT * FROM")
 }

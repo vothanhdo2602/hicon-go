@@ -19,6 +19,10 @@ import (
 	"time"
 )
 
+const (
+	fieldData = "data"
+)
+
 var (
 	client *redis.Client
 )
@@ -117,7 +121,7 @@ func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 	var (
 		logger       = log.WithCtx(ctx)
 		pipe         = client.Pipeline()
-		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database, sql)
 	)
 
 	// Reference data
@@ -127,8 +131,10 @@ func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 	}
 
 	refModelBytes, _ := json.Marshal(refModel)
-	pipe.HSet(ctx, sqlBucketKey, sql, refModelBytes)
-	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, sql)
+	pipe.HSet(ctx, sqlBucketKey, fieldData, refModelBytes)
+	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, fieldData)
+
+	fmt.Println("@@@@@@@@@@@@@@@2", string(refModelBytes))
 
 	CacheNestedModel(ctx, mp, m, pipe)
 
@@ -141,10 +147,10 @@ func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
 	var (
 		logger       = log.WithCtx(ctx)
-		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database, sql)
 	)
 
-	r, err := client.HGet(ctx, sqlBucketKey, sql).Result()
+	r, err := client.HGet(ctx, sqlBucketKey, fieldData).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			logger.Error(err.Error())
@@ -152,9 +158,11 @@ func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 		return nil
 	}
 
-	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, sql)
+	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
+
+	fmt.Println("@@@@@@@@@@@@@@@@@", r)
 
 	m = FulfillNestedModel(ctx, mp, m, findByPKFn)
 
@@ -165,7 +173,7 @@ func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 	var (
 		logger       = log.WithCtx(ctx)
 		pipe         = client.Pipeline()
-		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database, sql)
 	)
 
 	// Reference data
@@ -175,8 +183,8 @@ func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 	}
 
 	refModelBytes, _ := json.Marshal(refModel)
-	pipe.HSet(ctx, sqlBucketKey, sql, refModelBytes)
-	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, sql)
+	pipe.HSet(ctx, sqlBucketKey, fieldData, refModelBytes)
+	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
 	if asserted, ok := models.(*[]interface{}); ok {
 		newModels := *asserted
@@ -194,11 +202,11 @@ func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, models interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
 	var (
 		logger       = log.WithCtx(ctx)
-		sqlBucketKey = entity.GetSQLBucketKey(mp.Database)
+		sqlBucketKey = entity.GetSQLBucketKey(mp.Database, sql)
 		wg           sync.WaitGroup
 	)
 
-	r, err := client.HGet(ctx, sqlBucketKey, sql).Result()
+	r, err := client.HGet(ctx, sqlBucketKey, fieldData).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
 			logger.Error(err.Error())
@@ -206,21 +214,22 @@ func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 		return nil
 	}
 
-	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, sql)
+	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
-	_ = pjson.Unmarshal(ctx, []byte(r), &models)
+	_ = pjson.Unmarshal(ctx, []byte(r), models)
 
-	if asserted, ok := models.(*[]interface{}); ok {
-		newModels := *asserted
-		wg.Add(len(newModels))
-		for i := range newModels {
-			go func(i int) {
-				defer wg.Done()
-				newModels[i] = FulfillNestedModel(ctx, mp, newModels[i], findByPKFn)
-			}(i)
-		}
-		wg.Wait()
+	values := entity.GetReflectValue(models)
+	wg.Add(values.Len())
+	for i := 0; i < values.Len(); i++ {
+		go func(i int) {
+			defer wg.Done()
+			m := FulfillNestedModel(ctx, mp, values.Index(i).Interface(), findByPKFn)
+			if m != nil {
+				values.Index(i).Set(entity.GetReflectValue(m))
+			}
+		}(i)
 	}
+	wg.Wait()
 
 	return models
 }
@@ -305,24 +314,16 @@ func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interfa
 				newFields.Set(reflect.ValueOf(FulfillNestedModel(ctx, newMP, fieldsInterface, findByPKFn)))
 			}(fieldsInterface)
 		case orm.HasMany, orm.HasManyToMany:
-			var (
-				newArr = make([]interface{}, len(fieldsInterface.([]interface{})))
-			)
-			for i, field := range fieldsInterface.([]interface{}) {
+			for i := 0; i < newFields.Len(); i++ {
 				wg.Add(1)
-				go func(i int, fieldsInterface interface{}) {
+				go func(i int) {
 					defer wg.Done()
-					newArr[i] = FulfillNestedModel(ctx, newMP, field, findByPKFn)
-				}(i, field)
+					newFields.Index(i).Set(reflect.ValueOf(FulfillNestedModel(ctx, newMP, newFields.Index(i).Interface(), findByPKFn)))
+				}(i)
 			}
-
-			newFields.Set(reflect.ValueOf(newArr))
 		}
 	}
 	wg.Wait()
-
-	//b, _ := json.MarshalIndent(newModel, "", " ")
-	//fmt.Println("MarshalIndent FulfillNestedModel", string(b))
 
 	return newModel
 }
@@ -374,5 +375,58 @@ func HMDel(ctx context.Context, mp *constant.ModelParams, models interface{}) {
 	_, err := pipe.HDel(ctx, key, PKs...).Result()
 	if err != nil {
 		logger.Error(err.Error())
+	}
+}
+
+func HDelRefSQL(ctx context.Context, mp *constant.ModelParams) {
+	if client == nil {
+		return
+	}
+
+	var (
+		key             = entity.GetSQLBucketKeyWithTablePrefix(mp.Database, mp.Table)
+		fieldWithPrefix = fmt.Sprintf("*%s*", mp.Table)
+	)
+
+	for {
+		// Scan for matching fields
+		keys, cursor, err := client.HScan(ctx, key, 0, fieldWithPrefix, 100).Result()
+		if err != nil {
+			return
+		}
+
+		//for iter.Next(ctx) {
+		//	val := iter.Val()
+		//	//if len(fields) > 0 {
+		//	//	deleted, err := client.HDel(ctx, key, fields...).Result()
+		//	//	if err != nil {
+		//	//		return
+		//	//	}
+		//	//	totalDeleted += deleted
+		//	//}
+		//
+		//	fmt.Println("@@@@@@@@@2")
+		//}
+
+		//Extract field names that match the pattern
+		var fields []string
+		for i := 0; i < len(keys); i += 2 {
+			fields = append(fields, keys[i])
+		}
+
+		// Delete the matching fields
+		if len(fields) > 0 {
+			_, err := client.HDel(ctx, key, fields...).Result()
+			if err != nil {
+				return
+			}
+		}
+
+		// Exit the loop when the cursor is 0
+		if cursor == 0 {
+			break
+		}
+
+		fmt.Println("loop")
 	}
 }

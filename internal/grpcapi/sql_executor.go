@@ -151,6 +151,7 @@ func (SQLExecutor) FindAll(ctx context.Context, data *sqlexecutor.FindAll) (*sql
 			DisableCache: data.DisableCache,
 			Select:       data.Select,
 			Offset:       int(data.Offset),
+			Limit:        int(data.Limit),
 			OrderBy:      data.OrderBy,
 		}
 		svc = service.SQLExecutor()

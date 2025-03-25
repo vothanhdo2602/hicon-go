@@ -109,7 +109,7 @@ func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *constant.Mod
 		}
 	}
 
-	err := sql.WherePK().WhereDeleted().Scan(ctx)
+	err := sql.WherePK().WhereAllWithDeleted().Scan(ctx)
 	if err != nil {
 		if errors.Is(err, dbsql.ErrNoRows) {
 			return nil, nil
@@ -159,10 +159,6 @@ func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interfac
 
 		return models, nil
 	})
-
-	if err != nil {
-		return nil, err, shared
-	}
 
 	return v, err, shared
 }

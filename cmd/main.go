@@ -27,17 +27,17 @@ func main() {
 	go func() {
 		UpsertConfiguration(ctx)
 
-		//for i := 0; i < 10; i++ {
-		//go FindAll(ctx)
-		//go BulkInsert(ctx)
-		//go FindByPK(ctx)
-		//go FindOne(ctx)
-		//go UpdateByPK(ctx)
-		//go BulkUpdateByPK(ctx)
-		go UpdateAll(ctx)
-		//go DeleteByPK(ctx)
-		//go BulkWriteWithTx(ctx)
-		//}
+		for i := 0; i < 1; i++ {
+			FindAll(ctx)
+			//go BulkInsert(ctx)
+			//go FindByPK(ctx)
+			//go FindOne(ctx)
+			//go UpdateByPK(ctx)
+			//go BulkUpdateByPK(ctx)
+			//go UpdateAll(ctx)
+			//go DeleteByPK(ctx)
+			//go BulkWriteWithTx(ctx)
+		}
 	}()
 
 	l, err := net.Listen("tcp", addr)

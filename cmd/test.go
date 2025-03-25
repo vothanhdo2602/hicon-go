@@ -132,6 +132,7 @@ func FindAll(ctx context.Context) {
 			Relations:    []string{"profile"},
 			Offset:       0,
 			OrderBy:      []string{},
+			Limit:        10,
 		}
 	)
 
