@@ -134,8 +134,6 @@ func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 	pipe.HSet(ctx, sqlBucketKey, fieldData, refModelBytes)
 	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
-	fmt.Println("@@@@@@@@@@@@@@@2", string(refModelBytes))
-
 	CacheNestedModel(ctx, mp, m, pipe)
 
 	_, err = pipe.Exec(ctx)
@@ -161,8 +159,6 @@ func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
-
-	fmt.Println("@@@@@@@@@@@@@@@@@", r)
 
 	m = FulfillNestedModel(ctx, mp, m, findByPKFn)
 
