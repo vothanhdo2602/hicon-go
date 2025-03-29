@@ -3,8 +3,11 @@ export ENV=development
 server:
 	go run cmd/*
 
-run-services:
+run-compose:
 	docker compose -f deployment/docker/docker-compose.yaml up -d
+
+build-docker:
+	docker build -t hicon . -f ./deployment/docker/Dockerfile -D
 
 update-submodules:
 	git submodule update --init --recursive && \

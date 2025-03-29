@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph Backend
+        B1[Request 1\nUser Profile]
+        B2[Request 2\nUser Profile]
+        B3[Request 3\nUser Role]
+    end
+
+    QP{Query Proxy} 
+    
+    subgraph Optimization
+        direction TB
+        combine[Combine Identical Queries]
+        execute[Execute Single Query]
+        cache[Cache Results]
+    end
+
+    DB[(Database)]
+
+    B1 & B2 --> QP
+    B3 --> QP
+    QP --> |Analyze Queries| Optimization
+    combine --> execute
+    execute --> DB
+    DB --> execute
+    execute --> |Distribute Results| B1
+    execute --> |Distribute Results| B2
+    execute --> |Separate Result| B3
