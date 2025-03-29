@@ -2,11 +2,13 @@ package log
 
 import (
 	"context"
+	"github.com/vothanhdo2602/hicon/external/util/mongotil"
 	"go.uber.org/zap"
 )
 
 const (
-	loggerKey = "zap-ctx-logger"
+	loggerKey  = "zap-ctx-logger"
+	XRequestID = "X-Request-ID"
 )
 
 var (
@@ -14,7 +16,7 @@ var (
 )
 
 func Init() {
-	logger, _ = zap.NewDevelopment()
+	logger = zap.Must(zap.NewDevelopment())
 }
 
 func NewCtx(ctx context.Context, fields ...zap.Field) context.Context {
@@ -29,4 +31,16 @@ func WithCtx(ctx context.Context) *zap.Logger {
 		return ctxLogger
 	}
 	return logger
+}
+
+func GetContext(ctx context.Context, headers map[string]string) context.Context {
+	requestID := headers[XRequestID]
+	if requestID == "" {
+		requestID = mongotil.NewHexID()
+	}
+
+	return NewCtx(
+		ctx,
+		zap.String(XRequestID, requestID),
+	)
 }

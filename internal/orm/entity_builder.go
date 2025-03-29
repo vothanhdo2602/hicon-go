@@ -23,7 +23,7 @@ type CustomBaseModel struct {
 	bun.BaseModel
 }
 
-func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField, []reflect.StructField, []reflect.StructField, error) {
+func BuildEntity(tableConfig *config.TableConfig) ([]reflect.StructField, []reflect.StructField, []reflect.StructField, error) {
 	var (
 		// Embedded BaseModel with table name tag
 		embeddedBaseModel = reflect.StructField{
@@ -88,7 +88,7 @@ func BuildEntity(tableConfig *config.TableConfiguration) ([]reflect.StructField,
 	return fields, ptrFields, refFields, nil
 }
 
-func MapRelationToEntity(tableConfig *config.TableConfiguration, entities map[string][]reflect.StructField, refModels map[string][]reflect.StructField) error {
+func MapRelationToEntity(tableConfig *config.TableConfig, entities map[string][]reflect.StructField, refModels map[string][]reflect.StructField) error {
 	for colName, col := range tableConfig.RelationColumns {
 		if _, ok := entities[col.RefTable]; !ok {
 			return errors.New(fmt.Sprintf("Table %s not found", col.RefTable))

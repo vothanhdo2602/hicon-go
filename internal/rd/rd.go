@@ -170,6 +170,7 @@ func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 		logger       = log.WithCtx(ctx)
 		pipe         = client.Pipeline()
 		sqlBucketKey = entity.GetSQLBucketKey(mp.Database, sql)
+		wg           sync.WaitGroup
 	)
 
 	// Reference data
@@ -182,12 +183,15 @@ func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 	pipe.HSet(ctx, sqlBucketKey, fieldData, refModelBytes)
 	pipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
-	if asserted, ok := models.(*[]interface{}); ok {
-		newModels := *asserted
-		for i := range newModels {
-			CacheNestedModel(ctx, mp, newModels[i], pipe)
-		}
+	values := entity.GetReflectValue(models)
+	wg.Add(values.Len())
+	for i := 0; i < values.Len(); i++ {
+		go func(i int) {
+			defer wg.Done()
+			CacheNestedModel(ctx, mp, values.Index(i).Interface(), pipe)
+		}(i)
 	}
+	wg.Wait()
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -232,7 +236,7 @@ func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 
 func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface{}, pipe redis.Pipeliner) {
 	var (
-		relCols = config.GetModelRegistry().GetTableConfiguration(mp.Table).RelationColumns
+		relCols = config.GetModelRegistry().GetTableConfig(mp.Table).RelationColumns
 		pk      = entity.GetPK(mp.Table, m)
 		key     = entity.GetEntityBucketKey(mp.Database, mp.Table)
 	)
@@ -263,8 +267,9 @@ func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface
 		case orm.HasOne, orm.BelongsTo:
 			CacheNestedModel(ctx, newMP, fields.Interface(), pipe)
 		case orm.HasMany, orm.HasManyToMany:
-			for _, field := range fields.Interface().([]interface{}) {
-				CacheNestedModel(ctx, newMP, field, pipe)
+			values := entity.GetReflectValue(fields)
+			for i := 0; i < values.Len(); i++ {
+				CacheNestedModel(ctx, newMP, values.Field(i).Interface(), pipe)
 			}
 		}
 	}
@@ -272,7 +277,7 @@ func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface
 
 func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
 	var (
-		relCols = config.GetModelRegistry().GetTableConfiguration(mp.Table).RelationColumns
+		relCols = config.GetModelRegistry().GetTableConfig(mp.Table).RelationColumns
 		pk      = entity.GetPK(mp.Table, m)
 		wg      sync.WaitGroup
 	)

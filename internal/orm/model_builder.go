@@ -6,6 +6,6 @@ import (
 )
 
 type ModelBuilder struct {
-	tableConfig *config.TableConfiguration
+	tableConfig *config.TableConfig
 	definition  dynamicstruct.Builder
 }

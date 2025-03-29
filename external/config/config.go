@@ -6,19 +6,28 @@ import (
 	"github.com/goccy/go-json"
 	"reflect"
 	"strings"
+	"time"
 )
 
 type ENV struct {
-	DB     DB
-	Common struct {
+	Credential *Credential
+	DB         DB
+	Common     struct {
 		Host string
 		Port int
 	}
 }
 
+type Credential struct {
+	AccessKey string
+	SecretKey string
+	ExpireAt  *time.Time
+	IsValid   bool
+}
+
 type DB struct {
-	DBConfiguration *DBConfiguration
-	Redis           *Redis
+	DBConfig *DBConfig
+	Redis    *Redis
 }
 
 type Redis struct {
@@ -55,12 +64,12 @@ func (s ENV) GetDB() DB {
 	return s.DB
 }
 
-func (s DB) GetDBConfiguration() *DBConfiguration {
-	return GetENV().GetDB().DBConfiguration
+func (s DB) GetDBConfig() *DBConfig {
+	return GetENV().GetDB().DBConfig
 }
 
-func SetDBConfiguration(cfg *DBConfiguration) {
-	env.DB.DBConfiguration = cfg
+func SetDBConfig(cfg *DBConfig) {
+	env.DB.DBConfig = cfg
 }
 
 func SetRedisConfiguration(cfg *Redis) {
@@ -68,14 +77,18 @@ func SetRedisConfiguration(cfg *Redis) {
 }
 
 func ConfigurationUpdated() error {
-	if env.DB.DBConfiguration != nil {
+	if env.Credential == nil || !env.Credential.IsValid {
+		return errors.New("invalid credentials, please check your credentials and reconnect or contact to maintainer, gmail: illusionless10@gmail.com")
+	}
+
+	if env.DB.DBConfig != nil {
 		return nil
 	}
-	return errors.New("no configuration")
+	return errors.New("not found configuration, please send your configuration with func UpsertConfig")
 }
 
 func GetModelRegistry() *ModelRegistry {
-	return GetENV().GetDB().DBConfiguration.ModelRegistry
+	return GetENV().GetDB().DBConfig.ModelRegistry
 }
 
 func (s *ModelRegistry) GetNewModel(name string) interface{} {
@@ -166,6 +179,6 @@ func TransformModels(table string, fields []string, data interface{}, modelType 
 	return newModels, nil
 }
 
-func (s *DBConfiguration) GetDatabaseName() string {
-	return GetENV().GetDB().GetDBConfiguration().Database
+func (s *DBConfig) GetDatabaseName() string {
+	return GetENV().GetDB().GetDBConfig().Database
 }

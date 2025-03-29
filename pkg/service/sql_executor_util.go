@@ -10,7 +10,7 @@ func isDisableCache(localCache bool) bool {
 		env = config.GetENV()
 	)
 
-	if env.DB.DBConfiguration.DisableCache {
+	if env.DB.DBConfig.DisableCache {
 		return true
 	}
 

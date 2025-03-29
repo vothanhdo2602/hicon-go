@@ -3,11 +3,11 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
+	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
 	"reflect"
 )
 
-type DBConfiguration struct {
+type DBConfig struct {
 	Type          string
 	Host          string
 	Port          int
@@ -22,10 +22,10 @@ type DBConfiguration struct {
 }
 
 type ModelRegistry struct {
-	TableConfigurations map[string]*TableConfiguration
-	Models              map[string][]reflect.StructField // model with full columns and relations
-	PtrModels           map[string][]reflect.StructField // model for cache and update action
-	RefModels           map[string][]reflect.StructField // reference model for cache
+	TableConfigs map[string]*TableConfig
+	Models       map[string][]reflect.StructField // model with full columns and relations
+	PtrModels    map[string][]reflect.StructField // model for cache and update action
+	RefModels    map[string][]reflect.StructField // reference model for cache
 }
 
 const (
@@ -46,7 +46,7 @@ func (s *ModelRegistry) GetModelBuilder(tbl, modelType string) []reflect.StructF
 	return []reflect.StructField{}
 }
 
-type TableConfiguration struct {
+type TableConfig struct {
 	Name              string
 	PrimaryColumns    map[string]interface{}
 	Columns           map[string]*Column
@@ -54,8 +54,8 @@ type TableConfiguration struct {
 	SoftDeleteColumns map[string]string
 }
 
-func (s *ModelRegistry) GetTableConfiguration(tbl string) *TableConfiguration {
-	return s.TableConfigurations[tbl]
+func (s *ModelRegistry) GetTableConfig(tbl string) *TableConfig {
+	return s.TableConfigs[tbl]
 }
 
 type RelationColumn struct {
@@ -72,33 +72,33 @@ type Column struct {
 	SoftDelete   bool
 }
 
-func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration, error) {
-	dbCfg := &DBConfiguration{
-		Type:         req.DBConfiguration.Type,
-		Host:         req.DBConfiguration.Host,
-		Port:         req.DBConfiguration.Port,
-		Username:     req.DBConfiguration.Username,
-		Password:     req.DBConfiguration.Password,
-		Database:     req.DBConfiguration.Database,
-		MaxCons:      req.DBConfiguration.MaxCons,
+func NewDBConfig(req *requestmodel.UpsertConfig) (*DBConfig, error) {
+	dbCfg := &DBConfig{
+		Type:         req.DBConfig.Type,
+		Host:         req.DBConfig.Host,
+		Port:         req.DBConfig.Port,
+		Username:     req.DBConfig.Username,
+		Password:     req.DBConfig.Password,
+		Database:     req.DBConfig.Database,
+		MaxCons:      req.DBConfig.MaxCons,
 		DisableCache: req.DisableCache,
 		Debug:        req.Debug,
 		ModelRegistry: &ModelRegistry{
-			TableConfigurations: map[string]*TableConfiguration{},
-			Models:              map[string][]reflect.StructField{},
-			PtrModels:           map[string][]reflect.StructField{},
-			RefModels:           map[string][]reflect.StructField{},
+			TableConfigs: map[string]*TableConfig{},
+			Models:       map[string][]reflect.StructField{},
+			PtrModels:    map[string][]reflect.StructField{},
+			RefModels:    map[string][]reflect.StructField{},
 		},
 	}
 
-	if req.DBConfiguration.TLS != nil {
+	if req.DBConfig.TLS != nil {
 		dbCfg.TLS = &TLS{
-			RootCAPEM: req.DBConfiguration.TLS.RootCAPEM,
+			RootCAPEM: req.DBConfig.TLS.RootCAPEM,
 		}
 	}
 
-	for _, t := range req.TableConfigurations {
-		tblCfg := &TableConfiguration{
+	for _, t := range req.TableConfigs {
+		tblCfg := &TableConfig{
 			Name:              t.Name,
 			Columns:           map[string]*Column{},
 			PrimaryColumns:    map[string]interface{}{},
@@ -136,13 +136,13 @@ func NewDBConfiguration(req *requestmodel.UpsertConfiguration) (*DBConfiguration
 			}
 		}
 
-		dbCfg.ModelRegistry.TableConfigurations[t.Name] = tblCfg
+		dbCfg.ModelRegistry.TableConfigs[t.Name] = tblCfg
 	}
 
 	return dbCfg, nil
 }
 
-func NewRedisConfiguration(req *requestmodel.UpsertConfiguration) *Redis {
+func NewRedisConfiguration(req *requestmodel.UpsertConfig) *Redis {
 	return &Redis{
 		Host:     req.Redis.Host,
 		Port:     req.Redis.Port,

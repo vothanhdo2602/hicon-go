@@ -6,17 +6,25 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
-	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
+	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
 )
+
+func (s *sqlExecutorImpl) exec(ctx context.Context, tx bun.IDB, req *requestmodel.Exec) (interface{}, error, bool) {
+	var (
+		d = dao.SQLExecutor()
+	)
+
+	return d.Exec(ctx, tx, req.SQL, req.LockKey, req.Args...)
+}
 
 func (s *sqlExecutorImpl) bulkInsert(ctx context.Context, tx bun.IDB, req *requestmodel.BulkInsert) (interface{}, error, bool) {
 	fn := func() (interface{}, error) {
 		var (
 			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
+			dbCfg = config.GetENV().DB.DBConfig
 			mp    = &constant.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
@@ -58,7 +66,7 @@ func (s *sqlExecutorImpl) updateByPK(ctx context.Context, tx bun.IDB, req *reque
 	fn := func() (interface{}, error) {
 		var (
 			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
+			dbCfg = config.GetENV().DB.DBConfig
 			mp    = &constant.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
@@ -104,7 +112,7 @@ func (s *sqlExecutorImpl) updateAll(ctx context.Context, tx bun.IDB, req *reques
 	fn := func() (interface{}, error) {
 		var (
 			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
+			dbCfg = config.GetENV().DB.DBConfig
 			mp    = &constant.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
@@ -155,7 +163,7 @@ func (s *sqlExecutorImpl) bulkUpdateByPK(ctx context.Context, tx bun.IDB, req *r
 	fn := func() (interface{}, error) {
 		var (
 			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
+			dbCfg = config.GetENV().DB.DBConfig
 			mp    = &constant.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
@@ -197,7 +205,7 @@ func (s *sqlExecutorImpl) deleteByPK(ctx context.Context, tx bun.IDB, req *reque
 	fn := func() (interface{}, error) {
 		var (
 			d     = dao.SQLExecutor()
-			dbCfg = config.GetENV().DB.DBConfiguration
+			dbCfg = config.GetENV().DB.DBConfig
 			mp    = &constant.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
@@ -246,6 +254,8 @@ func (s *sqlExecutorImpl) deleteByPK(ctx context.Context, tx bun.IDB, req *reque
 func (s *sqlExecutorImpl) processBulkWrite(ctx context.Context, tx *bun.Tx, req *requestmodel.BulkWriteWithTx) (err error) {
 	for _, o := range req.Operations {
 		switch o.Name {
+		case constant.BWOperationExec:
+			err = s.processExec(ctx, tx, o)
 		case constant.BWOperationBulkInsert:
 			err = s.processBulkInsert(ctx, tx, o)
 		case constant.BWOperationUpdateByPK:
@@ -265,6 +275,16 @@ func (s *sqlExecutorImpl) processBulkWrite(ctx context.Context, tx *bun.Tx, req 
 		}
 	}
 
+	return err
+}
+
+func (s *sqlExecutorImpl) processExec(ctx context.Context, tx *bun.Tx, o *requestmodel.Operation) error {
+	data, err := pjson.ConvertWithType[requestmodel.Exec](o.Data)
+	if err != nil {
+		return err
+	}
+	data.LockKey = ""
+	_, err, _ = s.exec(ctx, tx, &data)
 	return err
 }
 

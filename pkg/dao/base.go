@@ -58,7 +58,7 @@ type BaseInterface interface {
 	FindByPK(ctx context.Context, pk interface{}, id string, mp *constant.ModelParams) (m interface{}, err error, shared bool)
 	FindOne(ctx context.Context, sql dbInterface, model interface{}, mp *constant.ModelParams, values ...any) (m interface{}, err error, shared bool)
 	FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool)
-	Exec(ctx context.Context, stringSQL, lockKey string, args ...any) (interface{}, error, bool)
+	Exec(ctx context.Context, tx bun.IDB, stringSQL, lockKey string, args ...any) (interface{}, error, bool)
 	BulkInsert(ctx context.Context, db bun.IDB, models interface{}, mp *constant.ModelParams) (m interface{}, err error)
 	UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
 	UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
@@ -83,7 +83,7 @@ func (s *baseImpl) FindByPK(ctx context.Context, m interface{}, id string, mp *c
 
 	if v != nil && !mp.WhereAllWithDeleted {
 		var (
-			cols = config.GetModelRegistry().GetTableConfiguration(mp.Table).SoftDeleteColumns
+			cols = config.GetModelRegistry().GetTableConfig(mp.Table).SoftDeleteColumns
 		)
 		for _, c := range cols {
 			if !entity.IsZeroValueField(v, c) {
@@ -205,14 +205,17 @@ func (s *baseImpl) FindOne(ctx context.Context, sql dbInterface, m interface{}, 
 	return v, err, shared
 }
 
-func (s *baseImpl) Exec(ctx context.Context, stringSQL, lockKey string, args ...any) (interface{}, error, bool) {
+func (s *baseImpl) Exec(ctx context.Context, tx bun.IDB, stringSQL, lockKey string, args ...any) (interface{}, error, bool) {
 	fn := func() (interface{}, error) {
 		var (
 			logger = log.WithCtx(ctx)
-			db     = orm.GetDB()
 		)
 
-		rows, err := db.QueryContext(ctx, stringSQL, args...)
+		if tx == nil {
+			tx = orm.GetDB()
+		}
+
+		rows, err := tx.QueryContext(ctx, stringSQL, args...)
 		if err != nil {
 			if errors.Is(err, dbsql.ErrNoRows) {
 				return nil, nil

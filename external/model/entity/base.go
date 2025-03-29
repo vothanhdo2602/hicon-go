@@ -26,7 +26,7 @@ func GetEntityBucketKey(database, tableName string) string {
 
 func GetPK(table string, m interface{}) string {
 	var (
-		pk   = config.GetModelRegistry().TableConfigurations[table].PrimaryColumns
+		pk   = config.GetModelRegistry().TableConfigs[table].PrimaryColumns
 		keys []string
 	)
 

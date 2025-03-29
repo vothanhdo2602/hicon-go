@@ -1,20 +1,37 @@
-package main
+package gosdk
 
 import (
 	"context"
 	"fmt"
 	"github.com/goccy/go-json"
-	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
-	"github.com/vothanhdo2602/hicon/external/util/grpctil"
+	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/internal/orm"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func UpsertConfiguration(ctx context.Context) {
+var (
+	conn *grpc.ClientConn
+)
+
+func NewClient() (*grpc.ClientConn, error) {
+	if conn == nil {
+		newConn, err := grpc.NewClient("localhost:7979", grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			return nil, err
+		}
+		conn = newConn
+	}
+
+	return conn, nil
+}
+
+func UpsertConfig(ctx context.Context) {
 	var (
-		req = &requestmodel.UpsertConfiguration{
-			DBConfiguration: &requestmodel.DBConfiguration{
+		req = &requestmodel.UpsertConfig{
+			DBConfig: &requestmodel.DBConfig{
 				Type:     "postgres",
 				Host:     "localhost",
 				Port:     5432,
@@ -24,7 +41,7 @@ func UpsertConfiguration(ctx context.Context) {
 				MaxCons:  90,
 			},
 			Debug: true,
-			TableConfigurations: []*requestmodel.TableConfiguration{
+			TableConfigs: []*requestmodel.TableConfig{
 				{
 					Name: "users",
 					Columns: []*requestmodel.Column{
@@ -58,17 +75,17 @@ func UpsertConfiguration(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
 
-	_, err = sqlexecutor.NewSQLExecutorClient(conn).UpsertConfiguration(ctx, &anypb.Any{Value: reqBytes})
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).UpsertConfig(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		return
 	}
@@ -85,12 +102,12 @@ func FindByPK(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
@@ -117,23 +134,23 @@ func FindOne(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindOne(ctx, &anypb.Any{Value: reqBytes})
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).FindOne(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	fmt.Println("resp", resp.Data)
+	//fmt.Println("resp", resp.Data)
 }
 
 func FindAll(ctx context.Context) {
@@ -150,23 +167,23 @@ func FindAll(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
 
-	_, err = sqlexecutor.NewSQLExecutorClient(conn).FindAll(ctx, &anypb.Any{Value: reqBytes})
+	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindAll(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	//fmt.Println("resp", resp.Data)
+	fmt.Println("resp", resp)
 }
 
 func Exec(ctx context.Context) {
@@ -176,12 +193,12 @@ func Exec(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
@@ -209,12 +226,12 @@ func BulkInsert(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
@@ -241,12 +258,12 @@ func UpdateByPK(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
@@ -279,12 +296,12 @@ func UpdateAll(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
@@ -319,12 +336,12 @@ func BulkUpdateByPK(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
@@ -351,12 +368,12 @@ func DeleteByPK(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}
@@ -414,12 +431,12 @@ func BulkWriteWithTx(ctx context.Context) {
 		}
 	)
 
-	reqBytes, err := json.Marshal(req)
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: req})
 	if err != nil {
 		return
 	}
 
-	conn, err := grpctil.NewClient()
+	conn, err = NewClient()
 	if err != nil {
 		return
 	}

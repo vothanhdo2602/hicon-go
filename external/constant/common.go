@@ -34,6 +34,7 @@ type ModelParams struct {
 }
 
 const (
+	BWOperationExec           = "exec"
 	BWOperationBulkInsert     = "bulk_insert"
 	BWOperationUpdateByPK     = "update_by_pk"
 	BWOperationUpdateAll      = "update_all"

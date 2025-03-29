@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/constant"
-	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
-	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
+	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
+	"github.com/vothanhdo2602/hicon/hicon-sm/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"github.com/vothanhdo2602/hicon/internal/rd"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
@@ -21,7 +21,8 @@ var (
 )
 
 type SQLExecutorInterface interface {
-	UpsertConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse
+	Connect(ctx context.Context, req *requestmodel.Credential) *responsemodel.BaseResponse
+	UpsertConfig(ctx context.Context, req *requestmodel.UpsertConfig) *responsemodel.BaseResponse
 	FindByPK(ctx context.Context, req *requestmodel.FindByPK) *responsemodel.BaseResponse
 	FindOne(ctx context.Context, req *requestmodel.FindOne) *responsemodel.BaseResponse
 	FindAll(ctx context.Context, req *requestmodel.FindAll) *responsemodel.BaseResponse
@@ -48,12 +49,20 @@ func SQLExecutor() SQLExecutorInterface {
 	return sqlExecutor
 }
 
-func (s *sqlExecutorImpl) UpsertConfiguration(ctx context.Context, req *requestmodel.UpsertConfiguration) *responsemodel.BaseResponse {
+func (s *sqlExecutorImpl) Connect(ctx context.Context, req *requestmodel.Credential) *responsemodel.BaseResponse {
 	if err := req.Validate(); err != nil {
 		return responsemodel.R400(err.Error())
 	}
 
-	dbCfg, err := config.NewDBConfiguration(req)
+	return responsemodel.R200(nil, false)
+}
+
+func (s *sqlExecutorImpl) UpsertConfig(ctx context.Context, req *requestmodel.UpsertConfig) *responsemodel.BaseResponse {
+	if err := req.Validate(); err != nil {
+		return responsemodel.R400(err.Error())
+	}
+
+	dbCfg, err := config.NewDBConfig(req)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}
@@ -65,7 +74,7 @@ func (s *sqlExecutorImpl) UpsertConfiguration(ctx context.Context, req *requestm
 		refModels = map[string][]reflect.StructField{}
 	)
 
-	for _, v := range dbCfg.ModelRegistry.TableConfigurations {
+	for _, v := range dbCfg.ModelRegistry.TableConfigs {
 		instance, ptrInstance, refInstance, err := orm.BuildEntity(v)
 		if err != nil {
 			return responsemodel.R400(err.Error())
@@ -75,7 +84,7 @@ func (s *sqlExecutorImpl) UpsertConfiguration(ctx context.Context, req *requestm
 		refModels[v.Name] = refInstance
 	}
 
-	for _, v := range dbCfg.ModelRegistry.TableConfigurations {
+	for _, v := range dbCfg.ModelRegistry.TableConfigs {
 		if err = orm.MapRelationToEntity(v, models, refModels); err != nil {
 			return responsemodel.R400(err.Error())
 		}
@@ -94,7 +103,7 @@ func (s *sqlExecutorImpl) UpsertConfiguration(ctx context.Context, req *requestm
 		return responsemodel.R400(err.Error())
 	}
 
-	config.SetDBConfiguration(dbCfg)
+	config.SetDBConfig(dbCfg)
 	config.SetRedisConfiguration(rdCfg)
 
 	return responsemodel.R200(nil, false)
@@ -107,7 +116,7 @@ func (s *sqlExecutorImpl) FindByPK(ctx context.Context, req *requestmodel.FindBy
 
 	var (
 		d     = dao.SQLExecutor()
-		dbCfg = config.GetENV().DB.DBConfiguration
+		dbCfg = config.GetENV().DB.DBConfig
 		mp    = &constant.ModelParams{
 			Database:            dbCfg.GetDatabaseName(),
 			Table:               req.Table,
@@ -115,7 +124,7 @@ func (s *sqlExecutorImpl) FindByPK(ctx context.Context, req *requestmodel.FindBy
 			ModeType:            config.DefaultModelType,
 			WhereAllWithDeleted: req.WhereAllWithDeleted,
 		}
-		tableRegistry = config.GetModelRegistry().TableConfigurations[mp.Table]
+		tableRegistry = config.GetModelRegistry().TableConfigs[mp.Table]
 		arrKeys       []string
 	)
 
@@ -162,7 +171,7 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 
 	var (
 		d     = dao.SQLExecutor()
-		dbCfg = config.GetENV().DB.DBConfiguration
+		dbCfg = config.GetENV().DB.DBConfig
 		mp    = &constant.ModelParams{
 			Database:            dbCfg.GetDatabaseName(),
 			Table:               req.Table,
@@ -224,7 +233,7 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 
 	var (
 		d     = dao.SQLExecutor()
-		dbCfg = config.GetENV().DB.DBConfiguration
+		dbCfg = config.GetENV().DB.DBConfig
 		mp    = &constant.ModelParams{
 			Database:            dbCfg.GetDatabaseName(),
 			Table:               req.Table,
@@ -276,15 +285,11 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 }
 
 func (s *sqlExecutorImpl) Exec(ctx context.Context, req *requestmodel.Exec) *responsemodel.BaseResponse {
-	var (
-		d = dao.SQLExecutor()
-	)
-
 	if err := config.ConfigurationUpdated(); err != nil {
 		return responsemodel.R400(err.Error())
 	}
 
-	data, err, shared := d.Exec(ctx, req.SQL, req.LockKey, req.Args...)
+	data, err, shared := s.exec(ctx, nil, req)
 	if err != nil {
 		return responsemodel.R400(err.Error())
 	}

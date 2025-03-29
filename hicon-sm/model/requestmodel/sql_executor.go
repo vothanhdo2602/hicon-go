@@ -1,80 +1,55 @@
 package requestmodel
 
 import (
+	"context"
+	"errors"
 	validation "github.com/go-ozzo/ozzo-validation"
+	"github.com/goccy/go-json"
 	"github.com/vothanhdo2602/hicon/external/constant"
+	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
-type UpsertConfiguration struct {
-	DBConfiguration     *DBConfiguration
-	Redis               *Redis
-	TableConfigurations []*TableConfiguration
-	Debug               bool
-	DisableCache        bool
+var (
+	client *HiconClient
+)
+
+type HiconClient struct {
+	conn *grpc.ClientConn
 }
 
-type DBConfiguration struct {
-	Type     string
-	Host     string
-	Port     int
-	Username string
-	Password string
-	Database string
-	MaxCons  int
-	TLS      *TLS
-}
-
-type Redis struct {
-	Host     string
-	Port     int
-	Username string
-	Password string
-	DB       int
-	PoolSize int
-}
-
-type TLS struct {
-	CertPEM       string
-	PrivateKeyPEM string
-	RootCAPEM     string
-}
-
-type TableConfiguration struct {
-	Name            string
-	Columns         []*Column
-	RelationColumns []*RelationColumn
-}
-
-type Column struct {
-	Name         string
-	Type         string
-	Nullable     bool
-	IsPrimaryKey bool
-	SoftDelete   bool
-}
-
-type RelationColumn struct {
-	Name     string
-	RefTable string
-	Type     string
-	Join     string
-}
-
-func (m *UpsertConfiguration) Validate() error {
-	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.DBConfiguration, validation.Required),
+func NewHiconClient(ctx context.Context, addr string, accessKey, secretKey string) (*HiconClient, error) {
+	var (
+		req = &Credential{
+			AccessKey: accessKey,
+			SecretKey: secretKey,
+		}
 	)
-}
 
-func (m *DBConfiguration) Validate() error {
-	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Type, validation.In(constant.DBPostgres, constant.DBMysql)),
-		validation.Field(&m.Host, validation.Required),
-		validation.Field(&m.Port, validation.Min(1), validation.Max(65535)),
-		validation.Field(&m.MaxCons, validation.Min(1)),
-	)
+	newConn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+
+	reqBytes, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := sqlexecutor.NewSQLExecutorClient(newConn).Connect(ctx, &anypb.Any{Value: reqBytes})
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.Message != "" {
+		return nil, errors.New(resp.Message)
+	}
+
+	client = &HiconClient{conn: newConn}
+
+	return client, nil
 }
 
 type FindByPK struct {
@@ -85,11 +60,11 @@ type FindByPK struct {
 	WhereAllWithDeleted bool
 }
 
-func (m *FindByPK) Validate() error {
+func (s *FindByPK) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Table, validation.Required),
-		validation.Field(&m.Data, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
+		validation.Field(&s.Data, validation.Required),
 	)
 }
 
@@ -105,10 +80,10 @@ type FindOne struct {
 	WhereAllWithDeleted bool
 }
 
-func (m *FindOne) Validate() error {
+func (s *FindOne) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Table, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
 	)
 }
 
@@ -125,10 +100,10 @@ type FindAll struct {
 	WhereAllWithDeleted bool
 }
 
-func (m *FindAll) Validate() error {
+func (s *FindAll) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Table, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
 	)
 }
 
@@ -155,11 +130,11 @@ type BulkInsert struct {
 	DisableCache bool
 }
 
-func (m *BulkInsert) Validate() error {
+func (s *BulkInsert) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Table, validation.Required),
-		validation.Field(&m.Data, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
+		validation.Field(&s.Data, validation.Required),
 	)
 }
 
@@ -173,11 +148,11 @@ type UpdateByPK struct {
 	DisableCache bool
 }
 
-func (m *UpdateByPK) Validate() error {
+func (s *UpdateByPK) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Table, validation.Required),
-		validation.Field(&m.Data, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
+		validation.Field(&s.Data, validation.Required),
 	)
 }
 
@@ -193,13 +168,13 @@ type UpdateAll struct {
 	DisableCache        bool
 }
 
-func (m *UpdateAll) Validate() error {
+func (s *UpdateAll) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Table, validation.Required),
-		validation.Field(&m.Data, validation.Required),
-		validation.Field(&m.Where, validation.Required),
-		validation.Field(&m.Set, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
+		validation.Field(&s.Data, validation.Required),
+		validation.Field(&s.Where, validation.Required),
+		validation.Field(&s.Set, validation.Required),
 	)
 }
 
@@ -213,11 +188,11 @@ type BulkUpdateByPK struct {
 	DisableCache bool        `json:"disable_cache"`
 }
 
-func (m *BulkUpdateByPK) Validate() error {
+func (s *BulkUpdateByPK) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Table, validation.Required),
-		validation.Field(&m.Data, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
+		validation.Field(&s.Data, validation.Required),
 	)
 }
 
@@ -232,12 +207,11 @@ type DeleteByPK struct {
 	ForceDelete  bool
 }
 
-func (m *DeleteByPK) Validate() error {
+func (s *DeleteByPK) Validate() error {
 	return validation.ValidateStruct(
-		m,
-
-		validation.Field(&m.Table, validation.Required),
-		validation.Field(&m.Data, validation.Required),
+		s,
+		validation.Field(&s.Table, validation.Required),
+		validation.Field(&s.Data, validation.Required),
 	)
 }
 
@@ -246,10 +220,10 @@ type BulkWriteWithTx struct {
 	Operations []*Operation
 }
 
-func (m *BulkWriteWithTx) Validate() error {
+func (s *BulkWriteWithTx) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Operations),
+		s,
+		validation.Field(&s.Operations),
 	)
 }
 
@@ -258,9 +232,23 @@ type Operation struct {
 	Data interface{}
 }
 
-func (m *Operation) Validate() error {
+func (s *Operation) Validate() error {
 	return validation.ValidateStruct(
-		m,
-		validation.Field(&m.Name, validation.In(constant.BWOperationBulkInsert, constant.BWOperationUpdateByPK, constant.BWOperationUpdateAll, constant.BWOperationBulkUpdateByPK, constant.BWOperationDeleteByPK)),
+		s,
+		validation.Field(
+			&s.Name,
+			validation.In(
+				constant.BWOperationExec,
+				constant.BWOperationBulkInsert,
+				constant.BWOperationUpdateByPK,
+				constant.BWOperationUpdateAll,
+				constant.BWOperationBulkUpdateByPK,
+				constant.BWOperationDeleteByPK,
+			),
+		),
+		validation.Field(
+			&s.Data,
+			validation.Required,
+		),
 	)
 }

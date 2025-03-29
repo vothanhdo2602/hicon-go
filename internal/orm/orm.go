@@ -24,7 +24,7 @@ var (
 	db *bun.DB
 )
 
-func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfiguration) error {
+func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfig) error {
 	var (
 		logger  = log.WithCtx(ctx)
 		sslMode = "disable"
