@@ -10,18 +10,15 @@ flowchart LR
         B3[User_2 Profile]
     end
 
-    QP{Hicon Query Proxy}
-
-    subgraph Hicon QP Optimizer
+    subgraph Hicon Query Proxy
         direction TB
         combine[Combine Identical Queries]
         execute[Execute Single Identical Queries]
     end
 
     DB[(Redis\nor SQL Database...)]
-    B1 & B2 --> QP
-    B3 --> QP
-    QP -->|Analyze Queries| combine
+    B1 & B2 --> combine
+    B3 --> combine
     combine --> execute
     execute <-->|User_1 Profile| DB
     execute <-->|User_2 Profile| DB
