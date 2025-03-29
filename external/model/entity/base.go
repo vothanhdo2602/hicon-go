@@ -94,6 +94,6 @@ func IsZeroValueField(v interface{}, fieldName string) bool {
 }
 
 func ReduceSQL(sql string) string {
-	re := regexp.MustCompile("SELECT (.*) FROM")
-	return re.ReplaceAllString(sql, "SELECT * FROM")
+	re := regexp.MustCompile("SELECT (.*) FROM ")
+	return re.ReplaceAllString(sql, "")
 }
