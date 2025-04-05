@@ -6,7 +6,6 @@ import "google/protobuf/any.proto";
 option go_package = "./sqlexecutor";
 
 service SQLExecutor {
-  rpc Connect(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
   rpc UpsertConfig(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
   rpc FindByPK(google.protobuf.Any) returns (hicon.type.BaseResponse) {}
   rpc FindOne(google.protobuf.Any) returns (hicon.type.BaseResponse) {}

@@ -6,11 +6,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	_ "github.com/denisenkom/go-mssqldb"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	//_ "github.com/mattn/go-oci8"
 	"github.com/uptrace/bun"
+	"github.com/uptrace/bun/dialect/mssqldialect"
 	"github.com/uptrace/bun/dialect/mysqldialect"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/extra/bundebug"
@@ -76,6 +79,22 @@ func Init(ctx context.Context, wg *sync.WaitGroup, c *config.DBConfig) error {
 		}
 		sqlDB := stdlib.OpenDBFromPool(pool)
 		newDB = bun.NewDB(sqlDB, pgdialect.New(), bun.WithDiscardUnknownColumns())
+	//case constant.DBMOracle:
+	//	connParams := dsn.ConnectionParams{}
+	//	connParams.Username = c.Username
+	//	connParams.Password = godror.NewPassword(c.Password)
+	//	connParams.ConnectString = fmt.Sprintf("%s/%s", addr, c.Database)
+	//	oracleConnCfg := godror.NewConnector(connParams)
+	//	sqlDB := sql.OpenDB(oracleConnCfg)
+	//
+	//	newDB = bun.NewDB(sqlDB, oracledialect.New())
+	case constant.DBSQLServer:
+		sqlDB, err := sql.Open(constant.DBSQLServer, fmt.Sprintf("%s://%s:%s@%s?database=%s", constant.DBSQLServer, c.Username, c.Password, addr, c.Database))
+		if err != nil {
+			panic(err)
+		}
+
+		newDB = bun.NewDB(sqlDB, mssqldialect.New())
 	default:
 		return errors.New("database type not supported")
 	}

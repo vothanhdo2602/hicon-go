@@ -77,9 +77,9 @@ func SetRedisConfiguration(cfg *Redis) {
 }
 
 func ConfigurationUpdated() error {
-	if env.Credential == nil || !env.Credential.IsValid {
-		return errors.New("invalid credentials, please check your credentials and reconnect or contact to maintainer, gmail: illusionless10@gmail.com")
-	}
+	//if env.Credential == nil || !env.Credential.IsValid {
+	//	return errors.New("invalid credentials, please check your credentials and reconnect or contact to maintainer, gmail: illusionless10@gmail.com")
+	//}
 
 	if env.DB.DBConfig != nil {
 		return nil

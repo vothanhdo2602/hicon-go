@@ -1,35 +1,13 @@
-![img.png](img.png)
+![img.png](logo.png)
 
 ## [Flowchart]
 
-```mermaid
-flowchart LR
-    subgraph Your Backend
-        B1[User_1 Profile]
-        B2[User_1 Profile]
-        B3[User_2 Profile]
-    end
+![img.png](flowchart.png)
 
-    subgraph Hicon Query Proxy
-        direction TB
-        combine[Combine Identical Queries]
-        execute[Execute Single Identical Queries]
-    end
-
-    DB[(Redis\nor SQL Database...)]
-    B1 & B2 --> combine
-    B3 --> combine
-    combine --> execute
-    execute <-->|User_1 Profile| DB
-    execute <-->|User_2 Profile| DB
-    execute -->|Shared Result| B1
-    execute -->|Shared Result| B2
-    execute -->|Separate Result| B3
-```
-
-## Core Features
+## Features
 
 - [x] Built-in query builder use BunORM for security.
+- [x] GRPC.
 - [x] Combine identical queries into single query in the same time.
 - [x] Cache connections in pool.
 - [x] Support for multi DBs: MySQL, Postgresql.

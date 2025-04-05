@@ -65,17 +65,25 @@ func GetRedis() *redis.Client {
 func HSet(ctx context.Context, mp *constant.ModelParams, m interface{}) {
 	var (
 		logger = log.WithCtx(ctx)
-		pipe   = client.Pipeline()
+		pipe   redis.Pipeliner
 		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
 		pk     = entity.GetPK(mp.Table, m)
 	)
+
+	if mp.RedisPipe != nil {
+		pipe = mp.RedisPipe
+	} else {
+		pipe = client.Pipeline()
+	}
 
 	v, _ := json.Marshal(m)
 	pipe.HSet(ctx, key, pk, v)
 	pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
 
-	if _, err := pipe.Exec(ctx); err != nil {
-		logger.Error(err.Error())
+	if mp.RedisPipe == nil {
+		if _, err := pipe.Exec(ctx); err != nil {
+			logger.Error(err.Error())
+		}
 	}
 }
 
@@ -156,11 +164,22 @@ func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 		return nil
 	}
 
-	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, fieldData)
+	if mp.RedisPipe != nil {
+		mp.RedisPipe = client.Pipeline()
+	}
+
+	mp.RedisPipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
 
 	m = FulfillNestedModel(ctx, mp, m, findByPKFn)
+
+	go func() {
+		_, err = mp.RedisPipe.Exec(ctx)
+		if err != nil {
+			logger.Error(err.Error())
+		}
+	}()
 
 	return m
 }
@@ -214,7 +233,8 @@ func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 		return nil
 	}
 
-	go client.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, fieldData)
+	mp.RedisPipe = client.Pipeline()
+	mp.RedisPipe.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, fieldData)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), models)
 
@@ -230,6 +250,10 @@ func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 		}(i)
 	}
 	wg.Wait()
+
+	if _, err = mp.RedisPipe.Exec(ctx); err != nil {
+		logger.Error(err.Error())
+	}
 
 	return models
 }

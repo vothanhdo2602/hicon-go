@@ -159,6 +159,7 @@ func (g *Group) doCall(c *call, key string, fn func() (interface{}, error)) {
 			runtime.ReadMemStats(&m)
 			if m.Alloc/1024/1024 > 20 {
 				clear(g.m)
+				runtime.GC()
 			}
 		}
 

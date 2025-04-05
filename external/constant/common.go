@@ -2,7 +2,7 @@ package constant
 
 import (
 	"fmt"
-	"github.com/uptrace/bun"
+	"github.com/redis/go-redis/v9"
 	"time"
 )
 
@@ -30,7 +30,7 @@ type ModelParams struct {
 	ModeType            string
 	CacheKey            string
 	WhereAllWithDeleted bool
-	Tx                  bun.IDB
+	RedisPipe           redis.Pipeliner
 }
 
 const (

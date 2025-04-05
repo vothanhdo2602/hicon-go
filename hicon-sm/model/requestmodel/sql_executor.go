@@ -2,14 +2,9 @@ package requestmodel
 
 import (
 	"context"
-	"errors"
 	validation "github.com/go-ozzo/ozzo-validation"
-	"github.com/goccy/go-json"
 	"github.com/vothanhdo2602/hicon/external/constant"
-	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var (
@@ -22,32 +17,32 @@ type HiconClient struct {
 
 func NewHiconClient(ctx context.Context, addr string, accessKey, secretKey string) (*HiconClient, error) {
 	var (
-		req = &Credential{
-			AccessKey: accessKey,
-			SecretKey: secretKey,
-		}
+	//req = &Credential{
+	//	AccessKey: accessKey,
+	//	SecretKey: secretKey,
+	//}
 	)
 
-	newConn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
+	//newConn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	reqBytes, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
+	//reqBytes, err := json.Marshal(req)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(newConn).Connect(ctx, &anypb.Any{Value: reqBytes})
-	if err != nil {
-		return nil, err
-	}
+	//resp, err := sqlexecutor.NewSQLExecutorClient(newConn).Connect(ctx, &anypb.Any{Value: reqBytes})
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	if resp.Message != "" {
-		return nil, errors.New(resp.Message)
-	}
-
-	client = &HiconClient{conn: newConn}
+	//if resp.Message != "" {
+	//	return nil, errors.New(resp.Message)
+	//}
+	//
+	//client = &HiconClient{conn: newConn}
 
 	return client, nil
 }

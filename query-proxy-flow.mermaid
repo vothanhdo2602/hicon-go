@@ -1,27 +1,25 @@
 flowchart LR
-    subgraph Backend
-        B1[Request 1\nUser Profile]
-        B2[Request 2\nUser Profile]
-        B3[Request 3\nUser Role]
-    end
+subgraph Your Backend
+B1[User_1 Profile]
+B2[User_1 Profile]
+B3[User_2 Profile]
+end
 
-    QP{Query Proxy} 
-    
-    subgraph Optimization
-        direction TB
-        combine[Combine Identical Queries]
-        execute[Execute Single Query]
-        cache[Cache Results]
-    end
+QP{Hicon Query Proxy}
 
-    DB[(Database)]
+subgraph Hicon Query Proxy
+direction TB
+combine[Combine Identical Queries]
+execute[Execute Single Identical Queries]
+end
 
-    B1 & B2 --> QP
-    B3 --> QP
-    QP --> |Analyze Queries| Optimization
-    combine --> execute
-    execute --> DB
-    DB --> execute
-    execute --> |Distribute Results| B1
-    execute --> |Distribute Results| B2
-    execute --> |Separate Result| B3
+DB[(Redis\nor SQL Database...)]
+B1 & B2 -->|grpc| QP
+B3 -->|grpc| QP
+QP -->|Analyze Queries| combine
+combine --> execute
+execute <-->|User_1 Profile| DB
+execute <-->|User_2 Profile| DB
+execute -->|Shared Result| B1
+execute -->|Shared Result| B2
+execute -->|Separate Result| B3

@@ -20,7 +20,6 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SQLExecutor_Connect_FullMethodName         = "/SQLExecutor/Connect"
 	SQLExecutor_UpsertConfig_FullMethodName    = "/SQLExecutor/UpsertConfig"
 	SQLExecutor_FindByPK_FullMethodName        = "/SQLExecutor/FindByPK"
 	SQLExecutor_FindOne_FullMethodName         = "/SQLExecutor/FindOne"
@@ -38,7 +37,6 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SQLExecutorClient interface {
-	Connect(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
 	UpsertConfig(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
 	FindByPK(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
 	FindOne(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error)
@@ -58,16 +56,6 @@ type sQLExecutorClient struct {
 
 func NewSQLExecutorClient(cc grpc.ClientConnInterface) SQLExecutorClient {
 	return &sQLExecutorClient{cc}
-}
-
-func (c *sQLExecutorClient) Connect(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(BaseResponse)
-	err := c.cc.Invoke(ctx, SQLExecutor_Connect_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *sQLExecutorClient) UpsertConfig(ctx context.Context, in *anypb.Any, opts ...grpc.CallOption) (*BaseResponse, error) {
@@ -184,7 +172,6 @@ func (c *sQLExecutorClient) BulkWriteWithTx(ctx context.Context, in *anypb.Any, 
 // All implementations must embed UnimplementedSQLExecutorServer
 // for forward compatibility.
 type SQLExecutorServer interface {
-	Connect(context.Context, *anypb.Any) (*BaseResponse, error)
 	UpsertConfig(context.Context, *anypb.Any) (*BaseResponse, error)
 	FindByPK(context.Context, *anypb.Any) (*BaseResponse, error)
 	FindOne(context.Context, *anypb.Any) (*BaseResponse, error)
@@ -206,9 +193,6 @@ type SQLExecutorServer interface {
 // pointer dereference when methods are called.
 type UnimplementedSQLExecutorServer struct{}
 
-func (UnimplementedSQLExecutorServer) Connect(context.Context, *anypb.Any) (*BaseResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Connect not implemented")
-}
 func (UnimplementedSQLExecutorServer) UpsertConfig(context.Context, *anypb.Any) (*BaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpsertConfig not implemented")
 }
@@ -261,24 +245,6 @@ func RegisterSQLExecutorServer(s grpc.ServiceRegistrar, srv SQLExecutorServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&SQLExecutor_ServiceDesc, srv)
-}
-
-func _SQLExecutor_Connect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(anypb.Any)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SQLExecutorServer).Connect(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SQLExecutor_Connect_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SQLExecutorServer).Connect(ctx, req.(*anypb.Any))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _SQLExecutor_UpsertConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -486,10 +452,6 @@ var SQLExecutor_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "SQLExecutor",
 	HandlerType: (*SQLExecutorServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Connect",
-			Handler:    _SQLExecutor_Connect_Handler,
-		},
 		{
 			MethodName: "UpsertConfig",
 			Handler:    _SQLExecutor_UpsertConfig_Handler,

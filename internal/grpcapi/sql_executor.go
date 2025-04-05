@@ -16,23 +16,6 @@ type SQLExecutor struct {
 	sqlexecutor.UnimplementedSQLExecutorServer
 }
 
-func (SQLExecutor) Connect(ctx context.Context, data *anypb.Any) (*sqlexecutor.BaseResponse, error) {
-	var (
-		req requestmodel.BaseRequestWithType[requestmodel.Credential]
-		svc = service.SQLExecutor()
-	)
-
-	err := json.Unmarshal(data.Value, &req)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx = log.GetContext(ctx, req.Headers)
-	r := svc.Connect(ctx, req.Body)
-
-	return grpctil.NewResponse(r), nil
-}
-
 func (SQLExecutor) UpsertConfig(ctx context.Context, data *anypb.Any) (*sqlexecutor.BaseResponse, error) {
 	defer commontil.Recover(ctx)
 

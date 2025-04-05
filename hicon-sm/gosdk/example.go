@@ -94,8 +94,9 @@ func UpsertConfig(ctx context.Context) {
 func FindByPK(ctx context.Context) {
 	var (
 		req = &requestmodel.FindByPK{
-			Table:  "users",
-			Select: []string{"id"},
+			Table:        "users",
+			Select:       []string{},
+			DisableCache: false,
 			Data: map[string]interface{}{
 				"id": "67c567cd8b606b2293af1519",
 			},
@@ -112,13 +113,13 @@ func FindByPK(ctx context.Context) {
 		return
 	}
 
-	resp, err := sqlexecutor.NewSQLExecutorClient(conn).FindByPK(ctx, &anypb.Any{Value: reqBytes})
+	_, err = sqlexecutor.NewSQLExecutorClient(conn).FindByPK(ctx, &anypb.Any{Value: reqBytes})
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	fmt.Println("resp", resp.Data, resp.Shared)
+	//fmt.Println("resp", resp.Data, resp.Shared, resp.Message)
 }
 
 func FindOne(ctx context.Context) {
