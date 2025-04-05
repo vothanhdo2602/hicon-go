@@ -18,8 +18,8 @@ import (
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/extra/bundebug"
 	"github.com/vothanhdo2602/hicon/external/config"
-	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/util/log"
+	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
 	"sync"
 )
 

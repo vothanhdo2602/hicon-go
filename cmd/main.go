@@ -10,6 +10,8 @@ import (
 	"github.com/vothanhdo2602/hicon/internal/grpcapi"
 	"google.golang.org/grpc"
 	"net"
+	"sync"
+	"time"
 )
 
 func main() {
@@ -26,19 +28,31 @@ func main() {
 	sqlexecutor.RegisterSQLExecutorServer(srv, &grpcapi.SQLExecutor{})
 
 	go func() {
+		var wg sync.WaitGroup
 		gosdk.UpsertConfig(ctx)
+		//
 
-		for i := 0; i < 1; i++ {
-			//go gosdk.BulkInsert(ctx)
-			//go gosdk.FindByPK(ctx)
-			//go gosdk.FindOne(ctx)
-			go gosdk.FindAll(ctx)
-			//go gosdk.UpdateByPK(ctx)
-			//go gosdk.BulkUpdateByPK(ctx)
-			//go gosdk.UpdateAll(ctx)
-			//go gosdk.DeleteByPK(ctx)
-			//go gosdk.BulkWriteWithTx(ctx)
+		now := time.Now()
+		wg.Add(100000)
+		for i := 0; i < 100000; i++ {
+			go func() {
+				defer wg.Done()
+				gosdk.FindByPK(ctx)
+			}()
+
+			//		//go gosdk.BulkInsert(ctx)
+			//		//go gosdk.FindByPK(ctx)
+			//		//go gosdk.FindOne(ctx)
+			//		go gosdk.FindAll(ctx)
+			//		//go gosdk.UpdateByPK(ctx)
+			//		//go gosdk.BulkUpdateByPK(ctx)
+			//		//go gosdk.UpdateAll(ctx)
+			//		//go gosdk.DeleteByPK(ctx)
+			//		//go gosdk.BulkWriteWithTx(ctx)
 		}
+
+		wg.Wait()
+		fmt.Printf("Done in %v", time.Since(now))
 	}()
 
 	l, err := net.Listen("tcp", addr)
@@ -46,7 +60,7 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	logger.Info(fmt.Sprintf("⚡️[grpc server]: listen on %s", addr))
+	logger.Info(fmt.Sprintf("⚡️[grpc server]: listened on %s", addr))
 
 	defer srv.GracefulStop()
 	if err = srv.Serve(l); err != nil {

@@ -3,8 +3,8 @@ package pjson
 import (
 	"context"
 	"github.com/goccy/go-json"
-	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/util/log"
+	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
 )
 
 func Marshal(ctx context.Context, data interface{}) ([]byte, error) {

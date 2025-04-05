@@ -7,13 +7,12 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/redis/go-redis/v9"
 	"github.com/vothanhdo2602/hicon/external/config"
-	"github.com/vothanhdo2602/hicon/external/constant"
 	"github.com/vothanhdo2602/hicon/external/model/entity"
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
-	"github.com/vothanhdo2602/hicon/internal/orm"
+	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
 	"reflect"
 	"sync"
 	"time"
@@ -288,9 +287,9 @@ func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface
 		}
 
 		switch c.Type {
-		case orm.HasOne, orm.BelongsTo:
+		case constant.HasOne, constant.BelongsTo:
 			CacheNestedModel(ctx, newMP, fields.Interface(), pipe)
-		case orm.HasMany, orm.HasManyToMany:
+		case constant.HasMany, constant.HasManyToMany:
 			values := entity.GetReflectValue(fields)
 			for i := 0; i < values.Len(); i++ {
 				CacheNestedModel(ctx, newMP, values.Field(i).Interface(), pipe)
@@ -332,13 +331,13 @@ func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interfa
 		}
 
 		switch c.Type {
-		case orm.HasOne, orm.BelongsTo:
+		case constant.HasOne, constant.BelongsTo:
 			wg.Add(1)
 			go func(fieldsInterface interface{}) {
 				defer wg.Done()
 				newFields.Set(reflect.ValueOf(FulfillNestedModel(ctx, newMP, fieldsInterface, findByPKFn)))
 			}(fieldsInterface)
-		case orm.HasMany, orm.HasManyToMany:
+		case constant.HasMany, constant.HasManyToMany:
 			for i := 0; i < newFields.Len(); i++ {
 				wg.Add(1)
 				go func(i int) {

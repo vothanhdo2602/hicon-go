@@ -6,17 +6,10 @@ import (
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
+	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
 	"reflect"
 	"strings"
 	"time"
-)
-
-// RelationType defines the type of relationship
-const (
-	HasOne        = "has-one"
-	BelongsTo     = "belongs-to"
-	HasMany       = "has-many"
-	HasManyToMany = "has-many-to-many"
 )
 
 type CustomBaseModel struct {
@@ -104,10 +97,10 @@ func MapRelationToEntity(tableConfig *config.TableConfig, entities map[string][]
 		)
 
 		switch col.Type {
-		case HasOne, BelongsTo:
+		case constant.HasOne, constant.BelongsTo:
 			fieldType = reflect.PointerTo(modelType)
 			refFieldType = reflect.PointerTo(refModelType)
-		case HasMany, HasManyToMany:
+		case constant.HasMany, constant.HasManyToMany:
 			fieldType = reflect.SliceOf(modelType)
 			refFieldType = reflect.SliceOf(refModelType)
 		default:
