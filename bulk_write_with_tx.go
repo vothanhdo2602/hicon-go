@@ -20,7 +20,7 @@ func (s *BulkWriteWithTx) WithLockKey(lockKey string) *BulkWriteWithTx {
 }
 
 func (s *BulkWriteWithTx) Exec(ctx context.Context) (r *sqlexecutor.BaseResponse, err error) {
-	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: s})
+	reqBytes, err := json.Marshal(&BaseRequest{Body: s})
 	if err != nil {
 		return
 	}

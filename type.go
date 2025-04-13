@@ -206,3 +206,8 @@ type Operation struct {
 	name string
 	data interface{}
 }
+
+type BaseRequest struct {
+	Headers map[string]string `json:"headers"`
+	Body    interface{}
+}

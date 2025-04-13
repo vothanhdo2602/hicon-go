@@ -3,7 +3,6 @@ package hicon
 import (
 	"context"
 	"github.com/goccy/go-json"
-	"github.com/vothanhdo2602/hicon-go/hicon-sm/model/requestmodel"
 	"github.com/vothanhdo2602/hicon-go/hicon-sm/sqlexecutor"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -35,7 +34,7 @@ func (s *FindByPK) WhereAllWithDeleted() *FindByPK {
 }
 
 func (s *FindByPK) Exec(ctx context.Context) (r *sqlexecutor.BaseResponse, err error) {
-	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: s})
+	reqBytes, err := json.Marshal(&BaseRequest{Body: s})
 	if err != nil {
 		return
 	}
