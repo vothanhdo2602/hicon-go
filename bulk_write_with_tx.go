@@ -1,0 +1,29 @@
+package hicon
+
+import (
+	"context"
+	"github.com/goccy/go-json"
+	"github.com/vothanhdo2602/hicon-go/hicon-sm/model/requestmodel"
+	"github.com/vothanhdo2602/hicon-go/hicon-sm/sqlexecutor"
+	"google.golang.org/protobuf/types/known/anypb"
+)
+
+func (s *Client) NewBulkWriteWithTx(operations ...*Operation) *BulkWriteWithTx {
+	return &BulkWriteWithTx{
+		operations: operations,
+	}
+}
+
+func (s *BulkWriteWithTx) WithLockKey(lockKey string) *BulkWriteWithTx {
+	s.lockKey = lockKey
+	return s
+}
+
+func (s *BulkWriteWithTx) Exec(ctx context.Context) (r *sqlexecutor.BaseResponse, err error) {
+	reqBytes, err := json.Marshal(&requestmodel.BaseRequest{Body: s})
+	if err != nil {
+		return
+	}
+
+	return sqlexecutor.NewSQLExecutorClient(client.conn).BulkWriteWithTx(ctx, &anypb.Any{Value: reqBytes})
+}
