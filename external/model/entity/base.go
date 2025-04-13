@@ -2,7 +2,6 @@ package entity
 
 import (
 	"fmt"
-	"github.com/redis/go-redis/v9"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"reflect"
@@ -33,7 +32,7 @@ type ModelParams struct {
 	ModeType            string
 	CacheKey            string
 	WhereAllWithDeleted bool
-	RedisPipe           redis.Pipeliner
+	IsLazySet           bool
 }
 
 func GetPK(table string, m interface{}) string {

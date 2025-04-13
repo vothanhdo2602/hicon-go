@@ -8,7 +8,6 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/model/entity"
-	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
@@ -69,17 +68,14 @@ func HSet(ctx context.Context, mp *entity.ModelParams, m interface{}) {
 		pk     = entity.GetPK(mp.Table, m)
 	)
 
-	if mp.RedisPipe != nil {
-		pipe = mp.RedisPipe
+	if mp.IsLazySet {
+		hSetMap.Add(key, pk, constant.Expiry10Minutes)
 	} else {
 		pipe = client.Pipeline()
-	}
+		v, _ := json.Marshal(m)
+		pipe.HSet(ctx, key, pk, v)
+		pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
 
-	v, _ := json.Marshal(m)
-	pipe.HSet(ctx, key, pk, v)
-	pipe.HExpire(ctx, key, constant.Expiry10Minutes, pk)
-
-	if mp.RedisPipe == nil {
 		if _, err := pipe.Exec(ctx); err != nil {
 			logger.Error(err.Error())
 		}
@@ -101,7 +97,8 @@ func HGet(ctx context.Context, mp *entity.ModelParams, m interface{}) interface{
 		return nil
 	}
 
-	go client.HExpire(commontil.CopyContext(ctx), key, constant.Expiry10Minutes, pk)
+	hSetMap.Add(key, pk, constant.Expiry10Minutes)
+	//go client.HExpire(commontil.CopyContext(ctx), key, constant.Expiry10Minutes, pk)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
 
@@ -163,22 +160,12 @@ func HGetSQL(ctx context.Context, mp *entity.ModelParams, sql string, m interfac
 		return nil
 	}
 
-	if mp.RedisPipe != nil {
-		mp.RedisPipe = client.Pipeline()
-	}
-
-	mp.RedisPipe.HExpire(ctx, sqlBucketKey, constant.Expiry5Minutes, fieldData)
+	mp.IsLazySet = true
+	hSetMap.Add(sqlBucketKey, fieldData, constant.Expiry5Minutes)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), &m)
 
 	m = FulfillNestedModel(ctx, mp, m, findByPKFn)
-
-	go func() {
-		_, err = mp.RedisPipe.Exec(ctx)
-		if err != nil {
-			logger.Error(err.Error())
-		}
-	}()
 
 	return m
 }
@@ -232,8 +219,8 @@ func HGetAllSQL(ctx context.Context, mp *entity.ModelParams, sql string, models 
 		return nil
 	}
 
-	mp.RedisPipe = client.Pipeline()
-	mp.RedisPipe.HExpire(commontil.CopyContext(ctx), sqlBucketKey, constant.Expiry5Minutes, fieldData)
+	mp.IsLazySet = true
+	hSetMap.Add(sqlBucketKey, fieldData, constant.Expiry5Minutes)
 
 	_ = pjson.Unmarshal(ctx, []byte(r), models)
 
@@ -249,10 +236,6 @@ func HGetAllSQL(ctx context.Context, mp *entity.ModelParams, sql string, models 
 		}(i)
 	}
 	wg.Wait()
-
-	if _, err = mp.RedisPipe.Exec(ctx); err != nil {
-		logger.Error(err.Error())
-	}
 
 	return models
 }
@@ -393,6 +376,10 @@ func HMDel(ctx context.Context, mp *entity.ModelParams, models interface{}) {
 		for i := range newModels {
 			PKs = append(PKs, entity.GetPK(mp.Table, newModels[i]))
 		}
+	}
+
+	for _, k := range PKs {
+		hSetMap.DeleteField(key, k)
 	}
 
 	pipe.HDel(ctx, key, PKs...)

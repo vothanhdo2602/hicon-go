@@ -7,6 +7,7 @@ import (
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/internal/grpcapi"
+	"github.com/vothanhdo2602/hicon/internal/rd"
 	"google.golang.org/grpc"
 	"net"
 	"sync"
@@ -55,6 +56,8 @@ func main() {
 	}
 
 	logger.Info(fmt.Sprintf("⚡️[grpc server]: listened on %s", addr))
+
+	go rd.LazySet(ctx)
 
 	defer srv.GracefulStop()
 	if err = srv.Serve(l); err != nil {
