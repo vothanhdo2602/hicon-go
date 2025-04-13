@@ -314,9 +314,9 @@ func (s *baseImpl) UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interf
 	}
 
 	if !mp.DisableCache {
-		go rd.HSet(bgCtx, mp, m)
+		go rd.HMSet(bgCtx, mp, m)
 	} else {
-		go rd.HDel(bgCtx, mp, m)
+		go rd.HMDel(bgCtx, mp, m)
 	}
 
 	return m, err

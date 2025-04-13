@@ -33,22 +33,17 @@ func main() {
 		//
 
 		now := time.Now()
-		wg.Add(100000)
-		for i := 0; i < 100000; i++ {
-			go func() {
-				defer wg.Done()
-				gosdk.FindByPK(ctx)
-			}()
-
-			//		//go gosdk.BulkInsert(ctx)
-			//		//go gosdk.FindByPK(ctx)
-			//		//go gosdk.FindOne(ctx)
-			//		go gosdk.FindAll(ctx)
-			//		//go gosdk.UpdateByPK(ctx)
-			//		//go gosdk.BulkUpdateByPK(ctx)
-			//		//go gosdk.UpdateAll(ctx)
-			//		//go gosdk.DeleteByPK(ctx)
-			//		//go gosdk.BulkWriteWithTx(ctx)
+		wg.Add(1)
+		for i := 0; i < 1; i++ {
+			//go gosdk.BulkInsert(ctx)
+			//go gosdk.FindByPK(ctx)
+			//go gosdk.FindOne(ctx)
+			//go gosdk.FindAll(ctx)
+			//go gosdk.UpdateByPK(ctx)
+			//go gosdk.BulkUpdateByPK(ctx)
+			//go gosdk.UpdateAll(ctx)
+			//go gosdk.DeleteByPK(ctx)
+			//go gosdk.BulkWriteWithTx(ctx)
 		}
 
 		wg.Wait()
