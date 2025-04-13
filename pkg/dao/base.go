@@ -11,7 +11,6 @@ import (
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
-	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"github.com/vothanhdo2602/hicon/internal/rd"
 	"go.uber.org/zap"
@@ -55,15 +54,15 @@ type dbInterface interface {
 }
 
 type BaseInterface interface {
-	FindByPK(ctx context.Context, pk interface{}, id string, mp *constant.ModelParams) (m interface{}, err error, shared bool)
-	FindOne(ctx context.Context, sql dbInterface, model interface{}, mp *constant.ModelParams, values ...any) (m interface{}, err error, shared bool)
-	FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool)
+	FindByPK(ctx context.Context, pk interface{}, id string, mp *entity.ModelParams) (m interface{}, err error, shared bool)
+	FindOne(ctx context.Context, sql dbInterface, model interface{}, mp *entity.ModelParams, values ...any) (m interface{}, err error, shared bool)
+	FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *entity.ModelParams, values ...any) (interface{}, error, bool)
 	Exec(ctx context.Context, tx bun.IDB, stringSQL, lockKey string, args ...any) (interface{}, error, bool)
-	BulkInsert(ctx context.Context, db bun.IDB, models interface{}, mp *constant.ModelParams) (m interface{}, err error)
-	UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
-	UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
-	BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
-	DeleteByPK(ctx context.Context, sql *bun.DeleteQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error)
+	BulkInsert(ctx context.Context, db bun.IDB, models interface{}, mp *entity.ModelParams) (m interface{}, err error)
+	UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *entity.ModelParams) (r interface{}, err error)
+	UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *entity.ModelParams) (r interface{}, err error)
+	BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *entity.ModelParams) (r interface{}, err error)
+	DeleteByPK(ctx context.Context, sql *bun.DeleteQuery, m interface{}, mp *entity.ModelParams) (r interface{}, err error)
 }
 
 type baseImpl struct {
@@ -71,7 +70,7 @@ type baseImpl struct {
 	mu sync.Mutex
 }
 
-func (s *baseImpl) FindByPK(ctx context.Context, m interface{}, id string, mp *constant.ModelParams) (interface{}, error, bool) {
+func (s *baseImpl) FindByPK(ctx context.Context, m interface{}, id string, mp *entity.ModelParams) (interface{}, error, bool) {
 	var (
 		key = fmt.Sprintf("%s:%s", FindByPKAction, id)
 	)
@@ -95,7 +94,7 @@ func (s *baseImpl) FindByPK(ctx context.Context, m interface{}, id string, mp *c
 	return v, err, shared
 }
 
-func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *constant.ModelParams) (interface{}, error) {
+func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *entity.ModelParams) (interface{}, error) {
 	var (
 		logger = log.WithCtx(ctx)
 		db     = orm.GetDB()
@@ -125,7 +124,7 @@ func (s *baseImpl) findByPK(ctx context.Context, m interface{}, mp *constant.Mod
 	return m, nil
 }
 
-func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool) {
+func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interface{}, mp *entity.ModelParams, values ...any) (interface{}, error, bool) {
 	var (
 		sqlStr = sql.String()
 		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sqlStr)
@@ -163,7 +162,7 @@ func (s *baseImpl) FindAll(ctx context.Context, sql dbInterface, models interfac
 	return v, err, shared
 }
 
-func (s *baseImpl) FindOne(ctx context.Context, sql dbInterface, m interface{}, mp *constant.ModelParams, values ...any) (interface{}, error, bool) {
+func (s *baseImpl) FindOne(ctx context.Context, sql dbInterface, m interface{}, mp *entity.ModelParams, values ...any) (interface{}, error, bool) {
 	var (
 		sqlStr = sql.String()
 		sqlKey = fmt.Sprintf("%s:%s", FindAllAction, sqlStr)
@@ -241,7 +240,7 @@ func (s *baseImpl) Exec(ctx context.Context, tx bun.IDB, stringSQL, lockKey stri
 	return s.g.Do(sqlKey, fn)
 }
 
-func (s *baseImpl) BulkInsert(ctx context.Context, db bun.IDB, models interface{}, mp *constant.ModelParams) (m interface{}, err error) {
+func (s *baseImpl) BulkInsert(ctx context.Context, db bun.IDB, models interface{}, mp *entity.ModelParams) (m interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
 		sql    = db.NewInsert().Model(models)
@@ -264,7 +263,7 @@ func (s *baseImpl) BulkInsert(ctx context.Context, db bun.IDB, models interface{
 	return models, nil
 }
 
-func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *entity.ModelParams) (r interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
 		bgCtx  = commontil.CopyContext(ctx)
@@ -293,7 +292,7 @@ func (s *baseImpl) UpdateByPK(ctx context.Context, sql *bun.UpdateQuery, m inter
 	return m, err
 }
 
-func (s *baseImpl) UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+func (s *baseImpl) UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interface{}, mp *entity.ModelParams) (r interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
 		bgCtx  = commontil.CopyContext(ctx)
@@ -322,7 +321,7 @@ func (s *baseImpl) UpdateAll(ctx context.Context, sql *bun.UpdateQuery, m interf
 	return m, err
 }
 
-func (s *baseImpl) DeleteByPK(ctx context.Context, sql *bun.DeleteQuery, m interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+func (s *baseImpl) DeleteByPK(ctx context.Context, sql *bun.DeleteQuery, m interface{}, mp *entity.ModelParams) (r interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
 		bgCtx  = commontil.CopyContext(ctx)
@@ -351,7 +350,7 @@ func (s *baseImpl) DeleteByPK(ctx context.Context, sql *bun.DeleteQuery, m inter
 	return m, err
 }
 
-func (s *baseImpl) BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, models interface{}, mp *constant.ModelParams) (r interface{}, err error) {
+func (s *baseImpl) BulkUpdateByPK(ctx context.Context, sql *bun.UpdateQuery, models interface{}, mp *entity.ModelParams) (r interface{}, err error) {
 	var (
 		logger = log.WithCtx(ctx)
 		bgCtx  = commontil.CopyContext(ctx)

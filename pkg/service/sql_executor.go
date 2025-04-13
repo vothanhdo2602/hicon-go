@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/vothanhdo2602/hicon/external/config"
+	"github.com/vothanhdo2602/hicon/external/model/entity"
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
-	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"github.com/vothanhdo2602/hicon/internal/rd"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
@@ -117,7 +117,7 @@ func (s *sqlExecutorImpl) FindByPK(ctx context.Context, req *requestmodel.FindBy
 	var (
 		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfig
-		mp    = &constant.ModelParams{
+		mp    = &entity.ModelParams{
 			Database:            dbCfg.GetDatabaseName(),
 			Table:               req.Table,
 			DisableCache:        isDisableCache(req.DisableCache),
@@ -172,7 +172,7 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 	var (
 		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfig
-		mp    = &constant.ModelParams{
+		mp    = &entity.ModelParams{
 			Database:            dbCfg.GetDatabaseName(),
 			Table:               req.Table,
 			DisableCache:        isDisableCache(req.DisableCache),
@@ -234,7 +234,7 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 	var (
 		d     = dao.SQLExecutor()
 		dbCfg = config.GetENV().DB.DBConfig
-		mp    = &constant.ModelParams{
+		mp    = &entity.ModelParams{
 			Database:            dbCfg.GetDatabaseName(),
 			Table:               req.Table,
 			DisableCache:        isDisableCache(req.DisableCache),

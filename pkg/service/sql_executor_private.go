@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
+	"github.com/vothanhdo2602/hicon/external/model/entity"
 	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
 	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
@@ -25,7 +26,7 @@ func (s *sqlExecutorImpl) bulkInsert(ctx context.Context, tx bun.IDB, req *reque
 		var (
 			d     = dao.SQLExecutor()
 			dbCfg = config.GetENV().DB.DBConfig
-			mp    = &constant.ModelParams{
+			mp    = &entity.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
 				DisableCache: isDisableCache(req.DisableCache),
@@ -67,7 +68,7 @@ func (s *sqlExecutorImpl) updateByPK(ctx context.Context, tx bun.IDB, req *reque
 		var (
 			d     = dao.SQLExecutor()
 			dbCfg = config.GetENV().DB.DBConfig
-			mp    = &constant.ModelParams{
+			mp    = &entity.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
 				DisableCache: isDisableCache(req.DisableCache),
@@ -113,7 +114,7 @@ func (s *sqlExecutorImpl) updateAll(ctx context.Context, tx bun.IDB, req *reques
 		var (
 			d     = dao.SQLExecutor()
 			dbCfg = config.GetENV().DB.DBConfig
-			mp    = &constant.ModelParams{
+			mp    = &entity.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
 				DisableCache: isDisableCache(req.DisableCache),
@@ -164,7 +165,7 @@ func (s *sqlExecutorImpl) bulkUpdateByPK(ctx context.Context, tx bun.IDB, req *r
 		var (
 			d     = dao.SQLExecutor()
 			dbCfg = config.GetENV().DB.DBConfig
-			mp    = &constant.ModelParams{
+			mp    = &entity.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
 				DisableCache: isDisableCache(req.DisableCache),
@@ -206,7 +207,7 @@ func (s *sqlExecutorImpl) deleteByPK(ctx context.Context, tx bun.IDB, req *reque
 		var (
 			d     = dao.SQLExecutor()
 			dbCfg = config.GetENV().DB.DBConfig
-			mp    = &constant.ModelParams{
+			mp    = &entity.ModelParams{
 				Database:     dbCfg.GetDatabaseName(),
 				Table:        req.Table,
 				DisableCache: isDisableCache(req.DisableCache),

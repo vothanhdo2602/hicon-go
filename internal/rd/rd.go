@@ -61,7 +61,7 @@ func GetRedis() *redis.Client {
 	return client
 }
 
-func HSet(ctx context.Context, mp *constant.ModelParams, m interface{}) {
+func HSet(ctx context.Context, mp *entity.ModelParams, m interface{}) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   redis.Pipeliner
@@ -86,7 +86,7 @@ func HSet(ctx context.Context, mp *constant.ModelParams, m interface{}) {
 	}
 }
 
-func HGet(ctx context.Context, mp *constant.ModelParams, m interface{}) interface{} {
+func HGet(ctx context.Context, mp *entity.ModelParams, m interface{}) interface{} {
 	var (
 		logger = log.WithCtx(ctx)
 		key    = entity.GetEntityBucketKey(mp.Database, mp.Table)
@@ -108,7 +108,7 @@ func HGet(ctx context.Context, mp *constant.ModelParams, m interface{}) interfac
 	return m
 }
 
-func HDel(ctx context.Context, mp *constant.ModelParams, m interface{}) {
+func HDel(ctx context.Context, mp *entity.ModelParams, m interface{}) {
 	if client == nil {
 		return
 	}
@@ -124,7 +124,7 @@ func HDel(ctx context.Context, mp *constant.ModelParams, m interface{}) {
 	}
 }
 
-func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interface{}) {
+func HSetSQL(ctx context.Context, mp *entity.ModelParams, sql string, m interface{}) {
 	var (
 		logger       = log.WithCtx(ctx)
 		pipe         = client.Pipeline()
@@ -149,7 +149,7 @@ func HSetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 	}
 }
 
-func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
+func HGetSQL(ctx context.Context, mp *entity.ModelParams, sql string, m interface{}, findByPKFn func(context.Context, interface{}, string, *entity.ModelParams) (interface{}, error, bool)) interface{} {
 	var (
 		logger       = log.WithCtx(ctx)
 		sqlBucketKey = entity.GetSQLBucketKey(mp.Database, sql)
@@ -183,7 +183,7 @@ func HGetSQL(ctx context.Context, mp *constant.ModelParams, sql string, m interf
 	return m
 }
 
-func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, models interface{}) {
+func HSetAllSQL(ctx context.Context, mp *entity.ModelParams, sql string, models interface{}) {
 	var (
 		logger       = log.WithCtx(ctx)
 		pipe         = client.Pipeline()
@@ -217,7 +217,7 @@ func HSetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 	}
 }
 
-func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, models interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
+func HGetAllSQL(ctx context.Context, mp *entity.ModelParams, sql string, models interface{}, findByPKFn func(context.Context, interface{}, string, *entity.ModelParams) (interface{}, error, bool)) interface{} {
 	var (
 		logger       = log.WithCtx(ctx)
 		sqlBucketKey = entity.GetSQLBucketKey(mp.Database, sql)
@@ -257,7 +257,7 @@ func HGetAllSQL(ctx context.Context, mp *constant.ModelParams, sql string, model
 	return models
 }
 
-func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface{}, pipe redis.Pipeliner) {
+func CacheNestedModel(ctx context.Context, mp *entity.ModelParams, m interface{}, pipe redis.Pipeliner) {
 	var (
 		relCols = config.GetModelRegistry().GetTableConfig(mp.Table).RelationColumns
 		pk      = entity.GetPK(mp.Table, m)
@@ -280,7 +280,7 @@ func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface
 			continue
 		}
 
-		newMP := &constant.ModelParams{
+		newMP := &entity.ModelParams{
 			Table:    c.RefTable,
 			Database: mp.Database,
 			ModeType: config.PtrModelType,
@@ -298,7 +298,7 @@ func CacheNestedModel(ctx context.Context, mp *constant.ModelParams, m interface
 	}
 }
 
-func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interface{}, findByPKFn func(context.Context, interface{}, string, *constant.ModelParams) (interface{}, error, bool)) interface{} {
+func FulfillNestedModel(ctx context.Context, mp *entity.ModelParams, m interface{}, findByPKFn func(context.Context, interface{}, string, *entity.ModelParams) (interface{}, error, bool)) interface{} {
 	var (
 		relCols = config.GetModelRegistry().GetTableConfig(mp.Table).RelationColumns
 		pk      = entity.GetPK(mp.Table, m)
@@ -318,7 +318,7 @@ func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interfa
 			name      = pstring.Title(c.Name)
 			fields    = val.FieldByName(name)
 			newFields = newVal.FieldByName(name)
-			newMP     = &constant.ModelParams{
+			newMP     = &entity.ModelParams{
 				Table:    c.RefTable,
 				Database: mp.Database,
 				ModeType: mp.ModeType,
@@ -352,7 +352,7 @@ func FulfillNestedModel(ctx context.Context, mp *constant.ModelParams, m interfa
 	return newModel
 }
 
-func HMSet(ctx context.Context, mp *constant.ModelParams, models interface{}) {
+func HMSet(ctx context.Context, mp *entity.ModelParams, models interface{}) {
 	var (
 		logger = log.WithCtx(ctx)
 		pipe   = client.Pipeline()
@@ -377,7 +377,7 @@ func HMSet(ctx context.Context, mp *constant.ModelParams, models interface{}) {
 	}
 }
 
-func HMDel(ctx context.Context, mp *constant.ModelParams, models interface{}) {
+func HMDel(ctx context.Context, mp *entity.ModelParams, models interface{}) {
 	if client == nil {
 		return
 	}
@@ -402,7 +402,7 @@ func HMDel(ctx context.Context, mp *constant.ModelParams, models interface{}) {
 	}
 }
 
-func HDelRefSQL(ctx context.Context, mp *constant.ModelParams) {
+func HDelRefSQL(ctx context.Context, mp *entity.ModelParams) {
 	if client == nil {
 		return
 	}

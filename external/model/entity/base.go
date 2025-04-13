@@ -2,6 +2,7 @@ package entity
 
 import (
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"reflect"
@@ -22,6 +23,17 @@ type BaseEntity[T any] interface {
 
 func GetEntityBucketKey(database, tableName string) string {
 	return fmt.Sprintf("%s:%s", database, tableName)
+}
+
+type ModelParams struct {
+	Database            string
+	Table               string
+	DisableCache        bool
+	LockKey             string
+	ModeType            string
+	CacheKey            string
+	WhereAllWithDeleted bool
+	RedisPipe           redis.Pipeliner
 }
 
 func GetPK(table string, m interface{}) string {
