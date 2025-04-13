@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/vothanhdo2602/hicon/external/config"
+	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
+	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/external/util/pstring"
 	"github.com/vothanhdo2602/hicon/external/util/sftil"
 	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
-	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
-	"github.com/vothanhdo2602/hicon/hicon-sm/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"github.com/vothanhdo2602/hicon/internal/rd"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
@@ -152,8 +152,8 @@ func (s *sqlExecutorImpl) FindByPK(ctx context.Context, req *requestmodel.FindBy
 		return responsemodel.R400(err.Error())
 	}
 
-	if len(req.Select) > 0 {
-		newModel, err := config.TransformModel(req.Table, req.Select, data, config.PtrModelType)
+	if len(req.Selects) > 0 {
+		newModel, err := config.TransformModel(req.Table, req.Selects, data, config.PtrModelType)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}
@@ -201,7 +201,7 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 		sql.Relation(pstring.Title(v))
 	}
 
-	for _, v := range req.Join {
+	for _, v := range req.Joins {
 		sql.Join(v.Join, v.Args...)
 	}
 
@@ -214,8 +214,8 @@ func (s *sqlExecutorImpl) FindOne(ctx context.Context, req *requestmodel.FindOne
 		return responsemodel.R400(err.Error())
 	}
 
-	if len(req.Select) > 0 {
-		newModel, err := config.TransformModel(req.Table, req.Select, data, config.DefaultModelType)
+	if len(req.Selects) > 0 {
+		newModel, err := config.TransformModel(req.Table, req.Selects, data, config.DefaultModelType)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}
@@ -272,8 +272,8 @@ func (s *sqlExecutorImpl) FindAll(ctx context.Context, req *requestmodel.FindAll
 		return responsemodel.R400(err.Error())
 	}
 
-	if len(req.Select) > 0 {
-		newModels, err := config.TransformModels(req.Table, req.Select, data, config.DefaultModelType)
+	if len(req.Selects) > 0 {
+		newModels, err := config.TransformModels(req.Table, req.Selects, data, config.DefaultModelType)
 		if err != nil {
 			return responsemodel.R400(err.Error())
 		}

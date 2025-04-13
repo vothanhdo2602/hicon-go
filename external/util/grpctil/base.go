@@ -2,7 +2,7 @@ package grpctil
 
 import (
 	"github.com/goccy/go-json"
-	"github.com/vothanhdo2602/hicon/hicon-sm/model/responsemodel"
+	"github.com/vothanhdo2602/hicon/external/model/responsemodel"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"google.golang.org/protobuf/types/known/anypb"
 )

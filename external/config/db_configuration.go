@@ -3,7 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
+	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"reflect"
 )
 

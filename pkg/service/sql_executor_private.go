@@ -5,9 +5,9 @@ import (
 	"errors"
 	"github.com/uptrace/bun"
 	"github.com/vothanhdo2602/hicon/external/config"
+	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/pjson"
 	"github.com/vothanhdo2602/hicon/hicon-sm/constant"
-	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/internal/orm"
 	"github.com/vothanhdo2602/hicon/pkg/dao"
 )

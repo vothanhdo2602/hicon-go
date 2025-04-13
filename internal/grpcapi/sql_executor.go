@@ -3,10 +3,10 @@ package grpcapi
 import (
 	"context"
 	"github.com/goccy/go-json"
+	"github.com/vothanhdo2602/hicon/external/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/external/util/commontil"
 	"github.com/vothanhdo2602/hicon/external/util/grpctil"
 	"github.com/vothanhdo2602/hicon/external/util/log"
-	"github.com/vothanhdo2602/hicon/hicon-sm/model/requestmodel"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/pkg/service"
 	"google.golang.org/protobuf/types/known/anypb"
