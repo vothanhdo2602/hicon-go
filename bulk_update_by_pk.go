@@ -3,7 +3,6 @@ package hicon
 import (
 	"context"
 	"github.com/goccy/go-json"
-	"github.com/vothanhdo2602/hicon-go/hicon-sm/model/requestmodel"
 	"github.com/vothanhdo2602/hicon-go/hicon-sm/sqlexecutor"
 	"google.golang.org/protobuf/types/known/anypb"
 )
