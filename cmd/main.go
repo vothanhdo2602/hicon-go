@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/vothanhdo2602/hicon/external/config"
 	"github.com/vothanhdo2602/hicon/external/util/log"
-	"github.com/vothanhdo2602/hicon/hicon-sm/gosdk"
 	"github.com/vothanhdo2602/hicon/hicon-sm/sqlexecutor"
 	"github.com/vothanhdo2602/hicon/internal/grpcapi"
 	"google.golang.org/grpc"
@@ -29,7 +28,7 @@ func main() {
 
 	go func() {
 		var wg sync.WaitGroup
-		gosdk.UpsertConfig(ctx)
+		//gosdk.UpsertConfig(ctx)
 		//
 
 		now := time.Now()
