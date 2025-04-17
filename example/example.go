@@ -191,7 +191,7 @@ func UpdateAll(ctx context.Context) {
 	var (
 		query = c.NewUpdateAll("users").
 			WithLockKey(fmt.Sprintf("update_user_all_user_type_system")).
-			AddSet("type = ?", "external").
+			Set("type = ?", "external").
 			Where("type = ?", "system") // add some condition
 	)
 
@@ -210,7 +210,7 @@ func BulkUpdateByPK(ctx context.Context) {
 	var (
 		query = c.NewBulkUpdateByPK("users").
 			WithLockKey(fmt.Sprintf("update_user_all_user_type_system")).
-			AddSet("type").
+			Set("type").
 			Where("updated_at").
 			Data([]interface{}{
 				map[string]interface{}{
@@ -264,7 +264,7 @@ func BulkWriteWithTx(ctx context.Context) {
 	var (
 		bulkUpdateByPK = c.NewBulkUpdateByPK("users").
 				WithLockKey(fmt.Sprintf("update_user_all_user_type_system")).
-				AddSet("type").
+				Set("type").
 				Where("updated_at").
 				Data([]interface{}{
 				map[string]interface{}{
