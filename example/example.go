@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/vothanhdo2602/hicon-go"
-	"github.com/vothanhdo2602/hicon-go/hicon-sm/constant"
+	"github.com/vothanhdo2602/hicon-sm/constant"
 	"time"
 )
 

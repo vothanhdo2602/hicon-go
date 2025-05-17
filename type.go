@@ -3,7 +3,7 @@
 // MIT License - see LICENSE file for details.
 package hicon
 
-import "github.com/vothanhdo2602/hicon-go/hicon-sm/constant"
+import "github.com/vothanhdo2602/hicon-sm/constant"
 
 type UpsertConfig struct {
 	DBConfig     *DBConfig
