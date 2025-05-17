@@ -1,4 +1,4 @@
-// Package hicon provides a client SDK for optimizing database queries.
+// Package hicon provides a client SDK for optimizing database queries through hicon query proxy.
 //
 // MIT License - see LICENSE file for details.
 package hicon
@@ -32,32 +32,28 @@ func UpsertConfig(ctx context.Context) {
 			Password: "hicon_private_pwd",
 			PoolSize: 500,
 		}),
-		hicon.WithTable(
-			&hicon.TableConfig{
-				Name: "users",
-				Columns: []*hicon.Column{
-					{Name: "id", Type: "text", IsPrimaryKey: true},
-					{Name: "type", Type: "string"},
-					{Name: "created_at", Type: "time"},
-					{Name: "deleted_at", Type: "time", SoftDelete: true},
-				},
-				RelationColumns: []*hicon.RelationColumn{
-					{Name: "profile", Type: constant.HasOne, RefTable: "profiles", Join: "id=user_id"},
-				},
+		hicon.WithTable(&hicon.TableConfig{
+			Name: "users",
+			Columns: []*hicon.Column{
+				{Name: "id", Type: "text", IsPrimaryKey: true},
+				{Name: "type", Type: "string"},
+				{Name: "created_at", Type: "time"},
+				{Name: "deleted_at", Type: "time", SoftDelete: true},
 			},
-		),
-		hicon.WithTable(
-			&hicon.TableConfig{
-				Name: "profiles",
-				Columns: []*hicon.Column{
-					{Name: "id", Type: "text", IsPrimaryKey: true},
-					{Name: "user_id", Type: "string"},
-					{Name: "email", Type: "string"},
-					{Name: "name", Type: "string"},
-					{Name: "deleted_at", Type: "time", SoftDelete: true},
-				},
+			RelationColumns: []*hicon.RelationColumn{
+				{Name: "profile", Type: constant.HasOne, RefTable: "profiles", Join: "id=user_id"},
 			},
-		),
+		}),
+		hicon.WithTable(&hicon.TableConfig{
+			Name: "profiles",
+			Columns: []*hicon.Column{
+				{Name: "id", Type: "text", IsPrimaryKey: true},
+				{Name: "user_id", Type: "string"},
+				{Name: "email", Type: "string"},
+				{Name: "name", Type: "string"},
+				{Name: "deleted_at", Type: "time", SoftDelete: true},
+			},
+		}),
 	).Exec(ctx)
 	if err != nil {
 		fmt.Println("error: ", err)
