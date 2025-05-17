@@ -1,3 +1,6 @@
+// Package hicon provides a client SDK for optimizing database queries.
+//
+// MIT License - see LICENSE file for details.
 package hicon
 
 import (
