@@ -6,7 +6,7 @@ package hicon
 import (
 	"context"
 	"github.com/goccy/go-json"
-	"github.com/vothanhdo2602/hicon-go/hicon-sm/sqlexecutor"
+	"github.com/vothanhdo2602/hicon-sm/sqlexecutor"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
