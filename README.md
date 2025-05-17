@@ -9,6 +9,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ![img.png](flowchart.png)
 
 ## Why Hicon?
+- Suitable for high CCU systems.
 - Hicon is a solution that provides optimization techniques such as caching and connection pooling to improve application performance.
 - It also supports multiple databases including MySQL and PostgreSQL, making it easy to integrate with existing systems or add new ones as needed. Additionally, its built-in query builder ensures secure access to sensitive information stored within those databases. Finally, its ability to combine similar queries together reduces overhead costs associated with running multiple requests simultaneously.
 - Hicon is designed to be fast and efficient by minimizing the number of database queries made during each operation. This allows developers to build applications that can handle large amounts of data without sacrificing performance or scalability.
