@@ -8,13 +8,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ![img.png](flowchart.png)
 
-## Installation
+### Installation
+
+### Install package
 
 ```bash
 go get github.com/hicon-go/client
 ```
 
-## docker
+### Install Docker
 
 ```bash
 docker run --name hicon -p 7979:7979 -d vothanhdo2602/hicon
@@ -40,7 +42,7 @@ docker run --name hicon -p 7979:7979 -d vothanhdo2602/hicon
 ## Features
 
 - [x] Built-in query builder based on BunORM for security.
-- [x] Communicate through GRPC.
+- [x] Communicate with gRPC.
 - [x] Combine identical queries in the same time into single query.
 - [x] Cache connections in pool.
 - [x] Support for multi DBs: MySQL, Postgresql.
@@ -53,11 +55,13 @@ docker run --name hicon -p 7979:7979 -d vothanhdo2602/hicon
 
 ## Backlogs
 
-- [ ] Unit test.
 - [ ] SDK for PHP, C#, Ruby, Java...
 - [ ] OpenTelemetry.
-- [ ] Optimize for pagination.
-- [ ] Debug logging with your X-Request-Id.
+
+## Client SDK
+
+[Go](https://github.com/vothanhdo2602/hicon-go)\
+[NodeJS](https://github.com/vothanhdo2602) ==> Coming soon...
 
 ## Example:
 
