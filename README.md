@@ -10,13 +10,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Installation
 
-### Install package
+#### Install client sdk
 
 ```bash
-go get github.com/hicon-go/client
+go get github.com/vothanhdo2602/hicon-go
 ```
 
-### Install Docker
+#### Run Hicon
 
 ```bash
 docker run --name hicon -p 7979:7979 -d vothanhdo2602/hicon
