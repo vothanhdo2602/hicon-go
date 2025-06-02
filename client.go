@@ -34,3 +34,14 @@ func (s *Client) NewUpsertConfig(opts ...UpsertConfigOption) *UpsertConfig {
 
 	return cfg
 }
+
+type ExecOptions struct {
+	RequestID string
+}
+
+func (s *ExecOptions) build(opts ...UpsertConfigOption) *UpsertConfig {
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}

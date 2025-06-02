@@ -38,8 +38,13 @@ func (s *BulkUpdateByPK) Data(data []interface{}) *BulkUpdateByPK {
 	return s
 }
 
-func (s *BulkUpdateByPK) Exec(ctx context.Context) (r *sqlexecutor.BaseResponse, err error) {
-	reqBytes, err := json.Marshal(&BaseRequest{Body: s})
+func (s *BulkUpdateByPK) Exec(ctx context.Context, opts ExecOptions) (r *sqlexecutor.BaseResponse, err error) {
+	headers := map[string]string{}
+	if opts.RequestID != "" {
+		headers["X-Request-ID"] = opts.RequestID
+	}
+
+	reqBytes, err := json.Marshal(&BaseRequest{Body: s, Headers: headers})
 	if err != nil {
 		return
 	}

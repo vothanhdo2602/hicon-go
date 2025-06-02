@@ -1,4 +1,4 @@
-export VERSION=v1.0.0
+export VERSION=v1.0.5
 
 # make update-submodules branch=develop
 update-submodules:
@@ -6,9 +6,11 @@ update-submodules:
 	git submodule foreach git checkout $(branch) && \
 	git submodule foreach git pull origin $(branch)
 
-publish:
+remove-tag:
 	git tag -d ${VERSION} && \
 	git push origin -d ${VERSION} && \
+
+publish:
 	git tag ${VERSION} && \
 	git push origin ${VERSION} && \
 	go list -m github.com/vothanhdo2602/hicon-go@${VERSION}

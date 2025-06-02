@@ -58,8 +58,13 @@ func (s *FindAll) WhereAllWithDeleted() *FindAll {
 	return s
 }
 
-func (s *FindAll) Exec(ctx context.Context) (r *sqlexecutor.BaseResponse, err error) {
-	reqBytes, err := json.Marshal(&BaseRequest{Body: s})
+func (s *FindAll) Exec(ctx context.Context, opts ExecOptions) (r *sqlexecutor.BaseResponse, err error) {
+	headers := map[string]string{}
+	if opts.RequestID != "" {
+		headers["X-Request-ID"] = opts.RequestID
+	}
+
+	reqBytes, err := json.Marshal(&BaseRequest{Body: s, Headers: headers})
 	if err != nil {
 		return
 	}

@@ -11,7 +11,7 @@ type UpsertConfig struct {
 }
 
 type DBConfig struct {
-	Type     string
+	Type     constant.DBType
 	Host     string
 	Port     int
 	Username string
@@ -44,7 +44,7 @@ type TableConfig struct {
 
 type Column struct {
 	Name         string
-	Type         string
+	Type         constant.ColumnType
 	Nullable     bool
 	IsPrimaryKey bool
 	SoftDelete   bool
@@ -53,7 +53,7 @@ type Column struct {
 type RelationColumn struct {
 	Name     string
 	RefTable string
-	Type     string
+	Type     constant.RelationType
 	Join     string
 }
 

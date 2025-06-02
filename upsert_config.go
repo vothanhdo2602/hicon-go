@@ -3,6 +3,7 @@ package hicon
 import (
 	"context"
 	"github.com/goccy/go-json"
+	"github.com/vothanhdo2602/hicon-sm/constant"
 	"github.com/vothanhdo2602/hicon-sm/sqlexecutor"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -54,8 +55,13 @@ func (s *UpsertConfig) build(opts ...UpsertConfigOption) *UpsertConfig {
 }
 
 // Exec finalize the configuration
-func (s *UpsertConfig) Exec(ctx context.Context) (r *sqlexecutor.BaseResponse, err error) {
-	reqBytes, err := json.Marshal(&BaseRequest{Body: s})
+func (s *UpsertConfig) Exec(ctx context.Context, opts ExecOptions) (r *sqlexecutor.BaseResponse, err error) {
+	h := map[string]string{}
+	if opts.RequestID != "" {
+		h[constant.HeaderXRequestId] = opts.RequestID
+	}
+
+	reqBytes, err := json.Marshal(&BaseRequest{Body: s, Headers: h})
 	if err != nil {
 		return
 	}
