@@ -51,7 +51,7 @@ func UpsertConfig(ctx context.Context) {
 				{Name: "deleted_at", Type: "time", SoftDelete: true},
 			},
 		}),
-	).Exec(ctx)
+	).Exec(ctx, nil)
 	if err != nil {
 		fmt.Println("error: ", err)
 		return
@@ -71,7 +71,7 @@ func FindByPK(ctx context.Context) {
 			Selects("name")
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -88,7 +88,7 @@ func FindOne(ctx context.Context) {
 			Relation("Profile")
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -107,7 +107,7 @@ func FindAll(ctx context.Context) {
 			Offset(2)
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -124,7 +124,7 @@ func Exec(ctx context.Context) {
 		query = c.NewExec(sql).WithLockKey(sql)
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -149,7 +149,7 @@ func BulkInsert(ctx context.Context) {
 			})
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -172,7 +172,7 @@ func UpdateByPK(ctx context.Context) {
 			Where("type = ?", "system") // add some condition
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -191,7 +191,7 @@ func UpdateAll(ctx context.Context) {
 			Where("type = ?", "system") // add some condition
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -224,7 +224,7 @@ func BulkUpdateByPK(ctx context.Context) {
 			})
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -245,7 +245,7 @@ func DeleteByPK(ctx context.Context) {
 			})
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return
@@ -290,7 +290,7 @@ func BulkWriteWithTx(ctx context.Context) {
 		query = c.NewBulkWriteWithTx(bulkUpdateByPK.ToOperation(), updateByPK.ToOperation())
 	)
 
-	resp, err := query.Exec(ctx)
+	resp, err := query.Exec(ctx, nil)
 	if err != nil {
 		fmt.Println(err.Error())
 		return

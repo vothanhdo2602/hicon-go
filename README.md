@@ -66,3 +66,8 @@ docker run --name hicon -p 7979:7979 -d vothanhdo2602/hicon
 ## Example:
 
 go to [example.go](example/example.go)
+
+## Important
+
+- Hicon is still in beta version and may have some bugs.
+- There are many breaking changes between versions so please check before upgrading.
