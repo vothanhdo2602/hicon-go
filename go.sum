@@ -20,6 +20,8 @@ github.com/vothanhdo2602/hicon-sm v1.0.4 h1:qH+WJJnqtl9VTJ2PRpiZYxw1+NAuXZElftf9
 github.com/vothanhdo2602/hicon-sm v1.0.4/go.mod h1:QhZocZd9osK86pHCxiJlEZ3w3441B8izp3D8QCTh8ys=
 github.com/vothanhdo2602/hicon-sm v1.0.5 h1:6ld6HRQAJQG6cjNftkpWVVrs/uHmhrCNCC6B1hcJ/o4=
 github.com/vothanhdo2602/hicon-sm v1.0.5/go.mod h1:QhZocZd9osK86pHCxiJlEZ3w3441B8izp3D8QCTh8ys=
+github.com/vothanhdo2602/hicon-sm v1.1.0 h1:EGWA6mM8yt3svgNUeUN+T0Cy4nmSzm4wcnLFdiFtEE8=
+github.com/vothanhdo2602/hicon-sm v1.1.0/go.mod h1:QhZocZd9osK86pHCxiJlEZ3w3441B8izp3D8QCTh8ys=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
 go.opentelemetry.io/otel v1.34.0 h1:zRLXxLCgL1WyKsPVrgbSdMN4c0FMkDAskSTQP+0hdUY=

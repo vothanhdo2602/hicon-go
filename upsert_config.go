@@ -55,7 +55,7 @@ func (s *UpsertConfig) build(opts ...UpsertConfigOption) *UpsertConfig {
 }
 
 // Exec finalize the configuration
-func (s *UpsertConfig) Exec(ctx context.Context, opts ExecOptions) (r *sqlexecutor.BaseResponse, err error) {
+func (s *UpsertConfig) Exec(ctx context.Context, opts ExecOptions) (r *BaseResponse, err error) {
 	h := map[string]string{}
 	if opts.RequestID != "" {
 		h[constant.HeaderXRequestId] = opts.RequestID
@@ -66,5 +66,12 @@ func (s *UpsertConfig) Exec(ctx context.Context, opts ExecOptions) (r *sqlexecut
 		return
 	}
 
-	return sqlexecutor.NewSQLExecutorClient(client.conn).UpsertConfig(ctx, &anypb.Any{Value: reqBytes})
+	respBytes, err := sqlexecutor.NewSQLExecutorClient(client.conn).UpsertConfig(ctx, &anypb.Any{Value: reqBytes})
+	if err != nil {
+		return
+	}
+
+	result := &BaseResponse{}
+	err = json.Unmarshal(respBytes.Value, result)
+	return result, err
 }

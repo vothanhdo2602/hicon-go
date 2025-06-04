@@ -211,3 +211,11 @@ type BaseRequest struct {
 	Headers map[string]string `json:"headers"`
 	Body    interface{}
 }
+
+type BaseResponse struct {
+	Data    interface{}
+	Status  int
+	Message string
+	Shared  bool
+	Success bool
+}

@@ -5,7 +5,7 @@ go 1.24.3
 require (
 	github.com/goccy/go-json v0.10.5
 	github.com/google/uuid v1.6.0
-	github.com/vothanhdo2602/hicon-sm v1.0.5
+	github.com/vothanhdo2602/hicon-sm v1.1.0
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 )

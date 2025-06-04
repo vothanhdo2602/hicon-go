@@ -8,7 +8,7 @@ update-submodules:
 
 remove-tag:
 	git tag -d ${VERSION} && \
-	git push origin -d ${VERSION} && \
+	git push origin -d ${VERSION}
 
 publish:
 	git tag ${VERSION} && \
