@@ -55,7 +55,7 @@ func (s *UpsertConfig) build(opts ...UpsertConfigOption) *UpsertConfig {
 }
 
 // Exec finalize the configuration
-func (s *UpsertConfig) Exec(ctx context.Context, opts ExecOptions) (r *BaseResponse, err error) {
+func (s *UpsertConfig) Exec(ctx context.Context, opts *ExecOptions) (r *BaseResponse, err error) {
 	h := map[string]string{}
 	if opts.RequestID != "" {
 		h[constant.HeaderXRequestId] = opts.RequestID

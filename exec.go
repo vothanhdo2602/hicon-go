@@ -20,10 +20,12 @@ func (s *Exec) WithLockKey(lockKey string) *Exec {
 	return s
 }
 
-func (s *Exec) Exec(ctx context.Context, opts ExecOptions) (r *BaseResponse, err error) {
+func (s *Exec) Exec(ctx context.Context, opts *ExecOptions) (r *BaseResponse, err error) {
 	headers := map[string]string{}
-	if opts.RequestID != "" {
-		headers[constant.HeaderXRequestId] = opts.RequestID
+	if opts != nil {
+		if opts.RequestID != "" {
+			headers[constant.HeaderXRequestId] = opts.RequestID
+		}
 	}
 
 	reqBytes, err := json.Marshal(&BaseRequest{Body: s, Headers: headers})

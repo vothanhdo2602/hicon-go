@@ -29,10 +29,12 @@ func (s *BulkInsert) Data(data []interface{}) *BulkInsert {
 	return s
 }
 
-func (s *BulkInsert) Exec(ctx context.Context, opts ExecOptions) (r *BaseResponse, err error) {
+func (s *BulkInsert) Exec(ctx context.Context, opts *ExecOptions) (r *BaseResponse, err error) {
 	headers := map[string]string{}
-	if opts.RequestID != "" {
-		headers[constant.HeaderXRequestId] = opts.RequestID
+	if opts != nil {
+		if opts.RequestID != "" {
+			headers[constant.HeaderXRequestId] = opts.RequestID
+		}
 	}
 
 	reqBytes, err := json.Marshal(&BaseRequest{Body: s, Headers: headers})
