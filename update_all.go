@@ -10,32 +10,32 @@ import (
 
 func (s *Client) NewUpdateAll(table string) *UpdateAll {
 	return &UpdateAll{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *UpdateAll) WithDisableCache() *UpdateAll {
-	s.disableCache = true
+func (s *UpdateAll) Cache(isCache bool) *UpdateAll {
+	s.DisableCache = !isCache
 	return s
 }
 
 func (s *UpdateAll) WithLockKey(lockKey string) *UpdateAll {
-	s.lockKey = lockKey
+	s.LockKey = lockKey
 	return s
 }
 
-func (s *UpdateAll) Set(query string, args ...interface{}) *UpdateAll {
-	s.set = append(s.set, &QueryWithArgs{Query: query, Args: args})
+func (s *UpdateAll) WithSet(query string, args ...interface{}) *UpdateAll {
+	s.Set = append(s.Set, &QueryWithArgs{Query: query, Args: args})
 	return s
 }
 
-func (s *UpdateAll) Where(query string, args ...interface{}) *UpdateAll {
-	s.where = append(s.where, &QueryWithArgs{Query: query, Args: args})
+func (s *UpdateAll) WithWhere(query string, args ...interface{}) *UpdateAll {
+	s.Where = append(s.Where, &QueryWithArgs{Query: query, Args: args})
 	return s
 }
 
-func (s *UpdateAll) WhereAllWithDeleted() *UpdateAll {
-	s.whereAllWithDeleted = true
+func (s *UpdateAll) WithWhereAllWithDeleted() *UpdateAll {
+	s.WhereAllWithDeleted = true
 	return s
 }
 

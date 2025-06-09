@@ -10,32 +10,32 @@ import (
 
 func (s *Client) NewBulkUpdateByPK(table string) *BulkUpdateByPK {
 	return &BulkUpdateByPK{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *BulkUpdateByPK) WithDisableCache() *BulkUpdateByPK {
-	s.disableCache = true
+func (s *BulkUpdateByPK) Cache(isCache bool) *BulkUpdateByPK {
+	s.DisableCache = !isCache
 	return s
 }
 
 func (s *BulkUpdateByPK) WithLockKey(lockKey string) *BulkUpdateByPK {
-	s.lockKey = lockKey
+	s.LockKey = lockKey
 	return s
 }
 
-func (s *BulkUpdateByPK) Set(columns ...string) *BulkUpdateByPK {
-	s.set = append(s.set, columns...)
+func (s *BulkUpdateByPK) WithSet(columns ...string) *BulkUpdateByPK {
+	s.Set = append(s.Set, columns...)
 	return s
 }
 
-func (s *BulkUpdateByPK) Where(columns ...string) *BulkUpdateByPK {
-	s.where = append(s.where, columns...)
+func (s *BulkUpdateByPK) WithWhere(columns ...string) *BulkUpdateByPK {
+	s.Where = append(s.Where, columns...)
 	return s
 }
 
-func (s *BulkUpdateByPK) Data(data []interface{}) *BulkUpdateByPK {
-	s.data = data
+func (s *BulkUpdateByPK) WithData(data []interface{}) *BulkUpdateByPK {
+	s.Data = data
 	return s
 }
 

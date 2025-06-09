@@ -10,27 +10,27 @@ import (
 
 func (s *Client) NewFindByPK(table string) *FindByPK {
 	return &FindByPK{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *FindByPK) WithDisableCache() *FindByPK {
-	s.disableCache = true
+func (s *FindByPK) Cache(isCache bool) *FindByPK {
+	s.DisableCache = !isCache
 	return s
 }
 
-func (s *FindByPK) Selects(columns ...string) *FindByPK {
-	s.selects = append(s.selects, columns...)
+func (s *FindByPK) WithSelects(columns ...string) *FindByPK {
+	s.Selects = append(s.Selects, columns...)
 	return s
 }
 
-func (s *FindByPK) Data(data interface{}) *FindByPK {
-	s.data = data
+func (s *FindByPK) WithData(data interface{}) *FindByPK {
+	s.Data = data
 	return s
 }
 
-func (s *FindByPK) WhereAllWithDeleted() *FindByPK {
-	s.whereAllWithDeleted = true
+func (s *FindByPK) WithWhereAllWithDeleted() *FindByPK {
+	s.WhereAllWithDeleted = true
 	return s
 }
 

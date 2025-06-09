@@ -10,47 +10,47 @@ import (
 
 func (s *Client) NewFindOne(table string) *FindOne {
 	return &FindOne{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *FindOne) WithDisableCache() *FindOne {
-	s.disableCache = true
+func (s *FindOne) Cache(isCache bool) *FindOne {
+	s.DisableCache = !isCache
 	return s
 }
 
-func (s *FindOne) Selects(columns ...string) *FindOne {
-	s.selects = append(s.selects, columns...)
+func (s *FindOne) WithSelects(columns ...string) *FindOne {
+	s.Selects = append(s.Selects, columns...)
 	return s
 }
 
-func (s *FindOne) Where(query string, args ...interface{}) *FindOne {
-	s.where = append(s.where, &QueryWithArgs{Query: query, Args: args})
+func (s *FindOne) WithWhere(query string, args ...interface{}) *FindOne {
+	s.Where = append(s.Where, &QueryWithArgs{Query: query, Args: args})
 	return s
 }
 
 func (s *FindOne) Relation(relation ...string) *FindOne {
-	s.relations = append(s.relations, relation...)
+	s.Relations = append(s.Relations, relation...)
 	return s
 }
 
 func (s *FindOne) Join(query string, args ...interface{}) *FindOne {
-	s.joins = append(s.joins, &Join{Join: query, Args: args})
+	s.Joins = append(s.Joins, &Join{Join: query, Args: args})
 	return s
 }
 
-func (s *FindOne) Offset(offset int) *FindOne {
-	s.offset = offset
+func (s *FindOne) WithOffset(offset int) *FindOne {
+	s.Offset = offset
 	return s
 }
 
-func (s *FindOne) OrderBy(orderBy string) *FindOne {
-	s.orderBy = append(s.orderBy, orderBy)
+func (s *FindOne) WithOrderBy(orderBy string) *FindOne {
+	s.OrderBy = append(s.OrderBy, orderBy)
 	return s
 }
 
-func (s *FindOne) WhereAllWithDeleted() *FindOne {
-	s.whereAllWithDeleted = true
+func (s *FindOne) WithWhereAllWithDeleted() *FindOne {
+	s.WhereAllWithDeleted = true
 	return s
 }
 

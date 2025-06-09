@@ -10,27 +10,32 @@ import (
 
 func (s *Client) NewDeleteByPK(table string) *DeleteByPK {
 	return &DeleteByPK{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *DeleteByPK) WithDisableCache() *DeleteByPK {
-	s.disableCache = true
+func (s *DeleteByPK) Cache(isCache bool) *DeleteByPK {
+	s.DisableCache = !isCache
 	return s
 }
 
 func (s *DeleteByPK) WithLockKey(lockKey string) *DeleteByPK {
-	s.lockKey = lockKey
+	s.LockKey = lockKey
 	return s
 }
 
-func (s *DeleteByPK) Data(data interface{}) *DeleteByPK {
-	s.data = data
+func (s *DeleteByPK) WithForceDelete(forceDelete bool) *DeleteByPK {
+	s.ForceDelete = forceDelete
 	return s
 }
 
-func (s *DeleteByPK) Where(query string, args ...interface{}) *DeleteByPK {
-	s.where = append(s.where, &QueryWithArgs{Query: query, Args: args})
+func (s *DeleteByPK) WithData(data interface{}) *DeleteByPK {
+	s.Data = data
+	return s
+}
+
+func (s *DeleteByPK) WithWhere(query string, args ...interface{}) *DeleteByPK {
+	s.Where = append(s.Where, &QueryWithArgs{Query: query, Args: args})
 	return s
 }
 

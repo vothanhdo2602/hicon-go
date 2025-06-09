@@ -10,22 +10,22 @@ import (
 
 func (s *Client) NewBulkInsert(table string) *BulkInsert {
 	return &BulkInsert{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *BulkInsert) WithDisableCache() *BulkInsert {
-	s.disableCache = true
+func (s *BulkInsert) Cache(isCache bool) *BulkInsert {
+	s.DisableCache = !isCache
 	return s
 }
 
 func (s *BulkInsert) WithLockKey(lockKey string) *BulkInsert {
-	s.lockKey = lockKey
+	s.LockKey = lockKey
 	return s
 }
 
-func (s *BulkInsert) Data(data []interface{}) *BulkInsert {
-	s.data = data
+func (s *BulkInsert) WithData(data []interface{}) *BulkInsert {
+	s.Data = data
 	return s
 }
 

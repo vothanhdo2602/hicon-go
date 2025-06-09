@@ -58,23 +58,23 @@ type RelationColumn struct {
 }
 
 type FindByPK struct {
-	table               string
-	disableCache        bool
-	selects             []string
-	data                interface{}
-	whereAllWithDeleted bool
+	Table               string
+	DisableCache        bool
+	Selects             []string
+	Data                interface{}
+	WhereAllWithDeleted bool
 }
 
 type FindOne struct {
-	table               string
-	disableCache        bool
-	selects             []string
-	where               []*QueryWithArgs
-	relations           []string
-	joins               []*Join
-	offset              int
-	orderBy             []string
-	whereAllWithDeleted bool
+	Table               string
+	DisableCache        bool
+	Selects             []string
+	Where               []*QueryWithArgs
+	Relations           []string
+	Joins               []*Join
+	Offset              int
+	OrderBy             []string
+	WhereAllWithDeleted bool
 }
 
 type QueryWithArgs struct {
@@ -88,134 +88,134 @@ type Join struct {
 }
 
 type Exec struct {
-	lockKey string
-	sql     string
-	args    []interface{}
+	LockKey string
+	Sql     string
+	Args    []interface{}
 }
 
 func (s *Exec) ToOperation() *Operation {
 	return &Operation{
-		name: constant.BWOperationExec,
-		data: s,
+		Name: constant.BWOperationExec,
+		Data: s,
 	}
 }
 
 type FindAll struct {
-	table               string
-	disableCache        bool
-	selects             []string
-	where               []*QueryWithArgs
-	relations           []string
-	joins               []*Join
-	limit               int
-	offset              int
-	orderBy             []string
-	whereAllWithDeleted bool
+	Table               string
+	DisableCache        bool
+	Selects             []string
+	Where               []*QueryWithArgs
+	Relations           []string
+	Joins               []*Join
+	Limit               int
+	Offset              int
+	OrderBy             []string
+	WhereAllWithDeleted bool
 }
 
 type BulkInsert struct {
-	lockKey      string
-	table        string
-	data         []interface{}
-	disableCache bool
+	LockKey      string
+	Table        string
+	Data         []interface{}
+	DisableCache bool
 }
 
 func (s *BulkInsert) ToOperation() *Operation {
 	return &Operation{
-		name: constant.BWOperationBulkInsert,
-		data: s,
+		Name: constant.BWOperationBulkInsert,
+		Data: s,
 	}
 }
 
 type UpdateByPK struct {
 	// Lock key for concurrent insert operations
 	// The later task with the same lock key in the same time will not execute and get the result from the first task
-	lockKey      string
-	table        string
-	data         interface{}
-	where        []*QueryWithArgs
-	disableCache bool
+	LockKey      string
+	Table        string
+	Data         interface{}
+	Where        []*QueryWithArgs
+	DisableCache bool
 }
 
 func (s *UpdateByPK) ToOperation() *Operation {
 	return &Operation{
-		name: constant.BWOperationUpdateByPK,
-		data: s,
+		Name: constant.BWOperationUpdateByPK,
+		Data: s,
 	}
 }
 
 type UpdateAll struct {
 	// Lock key for concurrent insert operations
 	// The later task with the same lock key in the same time will not execute and get the result from the first task
-	lockKey             string
-	table               string
-	where               []*QueryWithArgs
-	set                 []*QueryWithArgs
-	whereAllWithDeleted bool
-	disableCache        bool
+	LockKey             string
+	Table               string
+	Where               []*QueryWithArgs
+	Set                 []*QueryWithArgs
+	WhereAllWithDeleted bool
+	DisableCache        bool
 }
 
 func (s *UpdateAll) ToOperation() *Operation {
 	return &Operation{
-		name: constant.BWOperationUpdateAll,
-		data: s,
+		Name: constant.BWOperationUpdateAll,
+		Data: s,
 	}
 }
 
 type BulkUpdateByPK struct {
 	// Lock key for concurrent insert operations
 	// The later task with the same lock key in the same time will not execute and get the result from the first task
-	lockKey      string
-	table        string
-	set          []string
-	where        []string
-	data         interface{}
-	disableCache bool
+	LockKey      string
+	Table        string
+	Set          []string
+	Where        []string
+	Data         interface{}
+	DisableCache bool
 }
 
 func (s *BulkUpdateByPK) ToOperation() *Operation {
 	return &Operation{
-		name: constant.BWOperationBulkUpdateByPK,
-		data: s,
+		Name: constant.BWOperationBulkUpdateByPK,
+		Data: s,
 	}
 }
 
 type DeleteByPK struct {
 	// Lock key for concurrent insert operations
 	// The later task with the same lock key in the same time will not execute and get the result from the first task
-	lockKey      string
-	table        string
-	data         interface{}
-	where        []*QueryWithArgs
-	disableCache bool
-	forceDelete  bool // if enable soft delete in table
+	LockKey      string
+	Table        string
+	Data         interface{}
+	Where        []*QueryWithArgs
+	DisableCache bool
+	ForceDelete  bool // if enable soft delete in table
 }
 
 func (s *DeleteByPK) ToOperation() *Operation {
 	return &Operation{
-		name: constant.BWOperationDeleteByPK,
-		data: s,
+		Name: constant.BWOperationDeleteByPK,
+		Data: s,
 	}
 }
 
 type BulkWriteWithTx struct {
-	lockKey    string
-	operations []*Operation
+	LockKey    string
+	Operations []*Operation
 }
 type Operation struct {
-	name string
-	data interface{}
+	Name string
+	Data interface{}
 }
 
 type BaseRequest struct {
 	Headers map[string]string `json:"headers"`
-	Body    interface{}
+	Body    interface{}       `json:"body"`
 }
 
 type BaseResponse struct {
-	Data    interface{}
-	Status  int
-	Message string
-	Shared  bool
-	Success bool
+	Data    interface{} `json:"data"`
+	Status  int         `json:"status"`
+	Message string      `json:"message"`
+	Shared  bool        `json:"shared"`
+	Success bool        `json:"success"`
 }

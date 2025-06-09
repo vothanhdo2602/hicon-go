@@ -10,27 +10,27 @@ import (
 
 func (s *Client) NewUpdateByPK(table string) *UpdateByPK {
 	return &UpdateByPK{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *UpdateByPK) WithDisableCache() *UpdateByPK {
-	s.disableCache = true
+func (s *UpdateByPK) Cache(isCache bool) *UpdateByPK {
+	s.DisableCache = !isCache
 	return s
 }
 
 func (s *UpdateByPK) WithLockKey(lockKey string) *UpdateByPK {
-	s.lockKey = lockKey
+	s.LockKey = lockKey
 	return s
 }
 
-func (s *UpdateByPK) Data(data interface{}) *UpdateByPK {
-	s.data = data
+func (s *UpdateByPK) WithData(data interface{}) *UpdateByPK {
+	s.Data = data
 	return s
 }
 
-func (s *UpdateByPK) Where(query string, args ...interface{}) *UpdateByPK {
-	s.where = append(s.where, &QueryWithArgs{Query: query, Args: args})
+func (s *UpdateByPK) WithWhere(query string, args ...interface{}) *UpdateByPK {
+	s.Where = append(s.Where, &QueryWithArgs{Query: query, Args: args})
 	return s
 }
 

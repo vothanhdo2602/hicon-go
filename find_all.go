@@ -10,52 +10,52 @@ import (
 
 func (s *Client) NewFindAll(table string) *FindAll {
 	return &FindAll{
-		table: table,
+		Table: table,
 	}
 }
 
-func (s *FindAll) WithDisableCache() *FindAll {
-	s.disableCache = true
+func (s *FindAll) Cache(isCache bool) *FindAll {
+	s.DisableCache = !isCache
 	return s
 }
 
-func (s *FindAll) Selects(columns ...string) *FindAll {
-	s.selects = append(s.selects, columns...)
+func (s *FindAll) WithSelects(columns ...string) *FindAll {
+	s.Selects = append(s.Selects, columns...)
 	return s
 }
 
-func (s *FindAll) Where(query string, args ...interface{}) *FindAll {
-	s.where = append(s.where, &QueryWithArgs{Query: query, Args: args})
+func (s *FindAll) WithWhere(query string, args ...interface{}) *FindAll {
+	s.Where = append(s.Where, &QueryWithArgs{Query: query, Args: args})
 	return s
 }
 
 func (s *FindAll) Relation(relation ...string) *FindAll {
-	s.relations = append(s.relations, relation...)
+	s.Relations = append(s.Relations, relation...)
 	return s
 }
 
 func (s *FindAll) Join(query string, args ...interface{}) *FindAll {
-	s.joins = append(s.joins, &Join{Join: query, Args: args})
+	s.Joins = append(s.Joins, &Join{Join: query, Args: args})
 	return s
 }
 
-func (s *FindAll) Limit(limit int) *FindAll {
-	s.limit = limit
+func (s *FindAll) WithLimit(limit int) *FindAll {
+	s.Limit = limit
 	return s
 }
 
-func (s *FindAll) Offset(offset int) *FindAll {
-	s.offset = offset
+func (s *FindAll) WithOffset(offset int) *FindAll {
+	s.Offset = offset
 	return s
 }
 
-func (s *FindAll) OrderBy(orderBy string) *FindAll {
-	s.orderBy = append(s.orderBy, orderBy)
+func (s *FindAll) WithOrderBy(orderBy string) *FindAll {
+	s.OrderBy = append(s.OrderBy, orderBy)
 	return s
 }
 
-func (s *FindAll) WhereAllWithDeleted() *FindAll {
-	s.whereAllWithDeleted = true
+func (s *FindAll) WithWhereAllWithDeleted() *FindAll {
+	s.WhereAllWithDeleted = true
 	return s
 }
 

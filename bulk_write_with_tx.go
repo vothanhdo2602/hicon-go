@@ -10,12 +10,12 @@ import (
 
 func (s *Client) NewBulkWriteWithTx(operations ...*Operation) *BulkWriteWithTx {
 	return &BulkWriteWithTx{
-		operations: operations,
+		Operations: operations,
 	}
 }
 
 func (s *BulkWriteWithTx) WithLockKey(lockKey string) *BulkWriteWithTx {
-	s.lockKey = lockKey
+	s.LockKey = lockKey
 	return s
 }
 

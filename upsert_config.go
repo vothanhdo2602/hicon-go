@@ -18,10 +18,10 @@ func WithDebug(debug bool) UpsertConfigOption {
 	}
 }
 
-// WithDisableCache toggles cache functionality
-func WithDisableCache(disable bool) UpsertConfigOption {
+// Cache toggles cache functionality
+func Cache(cache bool) UpsertConfigOption {
 	return func(c *UpsertConfig) {
-		c.DisableCache = disable
+		c.DisableCache = !cache
 	}
 }
 

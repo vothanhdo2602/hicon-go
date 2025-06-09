@@ -1,4 +1,4 @@
-export VERSION=v1.1.1
+export VERSION=v1.1.5
 
 # make update-submodules branch=develop
 update-submodules:

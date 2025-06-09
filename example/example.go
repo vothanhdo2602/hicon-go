@@ -26,29 +26,99 @@ func UpsertConfig(ctx context.Context) {
 			Host:     "localhost",
 			Port:     6379,
 			Username: "hicon",
-			Password: "hicon_private_pwd",
+			//Password: "hicon_private_pwd",
 			PoolSize: 500,
 		}),
 		hicon.WithTable(&hicon.TableConfig{
 			Name: "users",
 			Columns: []*hicon.Column{
-				{Name: "id", Type: "text", IsPrimaryKey: true},
-				{Name: "type", Type: "string"},
-				{Name: "created_at", Type: "time"},
-				{Name: "deleted_at", Type: "time", SoftDelete: true},
+				{Name: "id", Type: constant.ColumnTypeString, IsPrimaryKey: true},
+				{Name: "username", Type: constant.ColumnTypeString},
+				{Name: "email", Type: constant.ColumnTypeString},
+				{Name: "first_name", Type: constant.ColumnTypeString},
+				{Name: "last_name", Type: constant.ColumnTypeString},
+				{Name: "created_at", Type: constant.ColumnTypeTimestamp},
+				{Name: "is_active", Type: constant.ColumnTypeBoolean},
 			},
 			RelationColumns: []*hicon.RelationColumn{
-				{Name: "profile", Type: constant.HasOne, RefTable: "profiles", Join: "id=user_id"},
+				{
+					Name:     "roles",
+					RefTable: "user_roles",
+					Type:     constant.HasManyToMany,
+					Join:     "user=role",
+				},
 			},
 		}),
 		hicon.WithTable(&hicon.TableConfig{
-			Name: "profiles",
+			Name: "roles",
 			Columns: []*hicon.Column{
-				{Name: "id", Type: "text", IsPrimaryKey: true},
-				{Name: "user_id", Type: "string"},
-				{Name: "email", Type: "string"},
-				{Name: "name", Type: "string"},
-				{Name: "deleted_at", Type: "time", SoftDelete: true},
+				{Name: "id", Type: constant.ColumnTypeString, IsPrimaryKey: true},
+				{Name: "role_name", Type: constant.ColumnTypeString},
+				{Name: "description", Type: constant.ColumnTypeString},
+				{Name: "created_at", Type: constant.ColumnTypeString},
+				{Name: "is_active", Type: constant.ColumnTypeBoolean},
+			},
+			RelationColumns: []*hicon.RelationColumn{
+				{
+					Name:     "permissions",
+					RefTable: "permissions",
+					Type:     constant.HasManyToMany,
+					Join:     "id=permission_id",
+				},
+			},
+		}),
+		hicon.WithTable(&hicon.TableConfig{
+			Name: "permissions",
+			Columns: []*hicon.Column{
+				{Name: "id", Type: constant.ColumnTypeString, IsPrimaryKey: true},
+				{Name: "permission_name", Type: constant.ColumnTypeString},
+				{Name: "description", Type: constant.ColumnTypeString},
+				{Name: "resource", Type: constant.ColumnTypeString},
+				{Name: "action", Type: constant.ColumnTypeTimestamp},
+				{Name: "created_at", Type: constant.ColumnTypeTimestamp},
+			},
+		}),
+		hicon.WithTable(&hicon.TableConfig{
+			Name: "user_roles",
+			Columns: []*hicon.Column{
+				{Name: "user_id", Type: constant.ColumnTypeString, IsPrimaryKey: true},
+				{Name: "role_id", Type: constant.ColumnTypeString, IsPrimaryKey: true},
+				{Name: "assigned_at", Type: constant.ColumnTypeTimestamp},
+				{Name: "assigned_by", Type: constant.ColumnTypeString},
+			},
+			RelationColumns: []*hicon.RelationColumn{
+				{
+					Name:     "user",
+					RefTable: "users",
+					Type:     constant.BelongsTo,
+					Join:     "user_id=id",
+				}, {
+					Name:     "role",
+					RefTable: "roles",
+					Type:     constant.BelongsTo,
+					Join:     "role_id=id",
+				},
+			},
+		}),
+		hicon.WithTable(&hicon.TableConfig{
+			Name: "role_permissions",
+			Columns: []*hicon.Column{
+				{Name: "role_id", Type: constant.ColumnTypeString, IsPrimaryKey: true},
+				{Name: "permission_id", Type: constant.ColumnTypeString, IsPrimaryKey: true},
+				{Name: "granted_at", Type: constant.ColumnTypeTimestamp},
+			},
+			RelationColumns: []*hicon.RelationColumn{
+				{
+					Name:     "permission",
+					RefTable: "permissions",
+					Type:     constant.BelongsTo,
+					Join:     "permission_id=id",
+				}, {
+					Name:     "role",
+					RefTable: "roles",
+					Type:     constant.BelongsTo,
+					Join:     "role_id=id",
+				},
 			},
 		}),
 	).Exec(ctx, nil)
@@ -65,10 +135,10 @@ func FindByPK(ctx context.Context) {
 
 	var (
 		query = c.NewFindByPK("users").
-			Data(map[string]interface{}{
+			WithData(map[string]interface{}{
 				"id": "67c567cd8b606b2293af1519",
 			}).
-			Selects("name")
+			WithSelects("name")
 	)
 
 	resp, err := query.Exec(ctx, nil)
@@ -103,8 +173,8 @@ func FindAll(ctx context.Context) {
 	var (
 		query = c.NewFindAll("users").
 			Relation("Profile").
-			Limit(10).
-			Offset(2)
+			WithLimit(10).
+			WithOffset(2)
 	)
 
 	resp, err := query.Exec(ctx, nil)
@@ -139,9 +209,9 @@ func BulkInsert(ctx context.Context) {
 	var (
 		userID = uuid.New()
 		query  = c.NewBulkInsert("users").
-			WithDisableCache().
+			Cache(true).
 			WithLockKey(fmt.Sprintf("create_user:%s", userID)).
-			Data([]interface{}{
+			WithData([]interface{}{
 				map[string]interface{}{
 					"id":   userID,
 					"type": "system",
@@ -165,11 +235,11 @@ func UpdateByPK(ctx context.Context) {
 		userID = "67c567cd8b606b2293af1"
 		query  = c.NewUpdateByPK("users").
 			WithLockKey(fmt.Sprintf("update_user:%s", userID)).
-			Data(map[string]interface{}{
+			WithData(map[string]interface{}{
 				"id":   userID,     // auto set as condition if you set it as primary key in UpsertConfig func
 				"type": "external", // update field
 			}).
-			Where("type = ?", "system") // add some condition
+			WithWhere("type = ?", "system") // add some condition
 	)
 
 	resp, err := query.Exec(ctx, nil)
@@ -187,8 +257,8 @@ func UpdateAll(ctx context.Context) {
 	var (
 		query = c.NewUpdateAll("users").
 			WithLockKey(fmt.Sprintf("update_user_all_user_type_system")).
-			Set("type = ?", "external").
-			Where("type = ?", "system") // add some condition
+			WithSet("type = ?", "external").
+			WithWhere("type = ?", "system") // add some condition
 	)
 
 	resp, err := query.Exec(ctx, nil)
@@ -206,9 +276,9 @@ func BulkUpdateByPK(ctx context.Context) {
 	var (
 		query = c.NewBulkUpdateByPK("users").
 			WithLockKey(fmt.Sprintf("update_user_all_user_type_system")).
-			Set("type").
-			Where("updated_at").
-			Data([]interface{}{
+			WithSet("type").
+			WithWhere("updated_at").
+			WithData([]interface{}{
 				map[string]interface{}{
 					"id":         "67d299ad4244a581108b7da4",
 					"updated_at": time.Now(),
@@ -240,7 +310,7 @@ func DeleteByPK(ctx context.Context) {
 		userID = "67c567cd8b606b2293af1"
 		query  = c.NewDeleteByPK("users").
 			WithLockKey(fmt.Sprintf("delete_user:%s", userID)).
-			Data(map[string]interface{}{
+			WithData(map[string]interface{}{
 				"id": userID, // auto set as condition if you set it as primary key in UpsertConfig func
 			})
 	)
@@ -260,9 +330,9 @@ func BulkWriteWithTx(ctx context.Context) {
 	var (
 		bulkUpdateByPK = c.NewBulkUpdateByPK("users").
 				WithLockKey(fmt.Sprintf("update_user_all_user_type_system")).
-				Set("type").
-				Where("updated_at").
-				Data([]interface{}{
+				WithSet("type").
+				WithWhere("updated_at").
+				WithData([]interface{}{
 				map[string]interface{}{
 					"id":         "67d299ad4244a581108b7da4",
 					"updated_at": time.Now(),
@@ -279,11 +349,11 @@ func BulkWriteWithTx(ctx context.Context) {
 		userID     = "67c567cd8b606b2293af1"
 		updateByPK = c.NewUpdateByPK("users").
 				WithLockKey(fmt.Sprintf("update_user:%s", userID)).
-				Data(map[string]interface{}{
+				WithData(map[string]interface{}{
 				"id":   userID,     // auto set as condition if you set it as primary key in UpsertConfig func
 				"type": "external", // update field
 			}).
-			Where("type = ?", "system")
+			WithWhere("type = ?", "system")
 	)
 
 	var (

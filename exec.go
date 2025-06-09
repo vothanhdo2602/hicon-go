@@ -8,15 +8,15 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
-func (s *Client) NewExec(table string, args ...interface{}) *Exec {
+func (s *Client) NewExec(sql string, args ...interface{}) *Exec {
 	return &Exec{
-		sql:  table,
-		args: args,
+		Sql:  sql,
+		Args: args,
 	}
 }
 
 func (s *Exec) WithLockKey(lockKey string) *Exec {
-	s.lockKey = lockKey
+	s.LockKey = lockKey
 	return s
 }
 
